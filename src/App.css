@@ -1,42 +1,69 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+body,
+html,
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #050505;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+#root {
+  width: 100%;
+  max-width: none;
+  text-align: left;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+/* Custom Scrollbar */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Smooth Transitions */
+.transition-all {
+  transition-duration: 300ms;
+}
+
+/* Animations */
+@keyframes pulse-yellow {
+
+  0%,
+  100% {
+    opacity: 0.4;
   }
-  to {
-    transform: rotate(360deg);
+
+  50% {
+    opacity: 0.8;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+.animate-pulse-yellow {
+  animation: pulse-yellow 2s infinite;
+}
+
+/* Mobile Adjustments */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
 
-.card {
-  padding: 2em;
-}
+/* Prevent zoom on mobile inputs */
+@media screen and (max-width: 768px) {
 
-.read-the-docs {
-  color: #888;
+  input,
+  textarea {
+    font-size: 16px !important;
+  }
 }
