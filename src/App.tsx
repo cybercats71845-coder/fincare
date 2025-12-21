@@ -203,9 +203,12 @@ const AuthScreen = ({ onGuest, onGoogleLoginSuccess }: { onGuest: () => void, on
     onSuccess: async (tokenResponse) => {
       try {
         const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } });
+        if (!res.ok) throw new Error(`Google Error: ${res.status}`);
+        const ct = res.headers.get("content-type");
+        if (!ct || !ct.includes("application/json")) throw new Error("Google returned non-JSON response");
         const info = await res.json();
         onGoogleLoginSuccess(info);
-      } catch (error) { console.error("Login fetch error", error); alert("Login Failed"); }
+      } catch (error: any) { console.error("Login fetch error", error); alert(`Login Failed: ${error.message}`); }
     },
     onError: () => console.log('Login Failed'),
   });
@@ -363,8 +366,18 @@ const DarkPixelsInner = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('dp_user');
-    if (saved) { setUser(JSON.parse(saved)); setAuthState('user'); } else { setAuthState('auth'); }
+    try {
+      const saved = localStorage.getItem('dp_user');
+      if (saved && saved.startsWith('{')) {
+        setUser(JSON.parse(saved));
+        setAuthState('user');
+      } else {
+        setAuthState('auth');
+      }
+    } catch (e) {
+      console.error("Local user load failed", e);
+      setAuthState('auth');
+    }
   }, []);
 
   const fetchThreads = async () => {
@@ -473,6 +486,11 @@ const DarkPixelsInner = () => {
         if (!res.ok) {
           const textErr = await res.text();
           throw new Error(textErr.includes("<!DOCTYPE") ? "Server Error: Endpoint not found or returned HTML" : `API Error: ${res.status}`);
+        }
+
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("AI Endpoint returned non-JSON response (HTML)");
         }
 
         const data = await res.json();
