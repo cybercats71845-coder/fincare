@@ -25,7 +25,7 @@ const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
 };
 
-const CUSTOM_API_URL = getEnv("VITE_CUSTOM_API_URL", "https://api.darkpixels.tech/api/ai");
+const CUSTOM_API_URL = getEnv("VITE_CUSTOM_API_URL", "https://darkpixels.tech/generate");
 const API_KEY = getEnv("VITE_CUSTOM_API_KEY", "GOKUL9025491217");
 const TEXT_MODEL_ID = getEnv("VITE_TEXT_MODEL_ID", "gemma:2b");
 const BREADCRUMB_LOGO = "/logo.png";
