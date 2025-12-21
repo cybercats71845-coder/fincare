@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Send, Settings, Paperclip, Image as ImageIcon,
-  FileText, X, Cpu,
-  Download, Trash2, Terminal,
+  FileText, X,
+  Download, Trash2,
   Zap, Code, Wind, MessageCircle, BrainCircuit,
   Plus, Sidebar as SidebarIcon, User as UserIcon, LogOut,
   LayoutTemplate, Sparkles,
@@ -16,11 +16,7 @@ import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
  */
 const getEnv = (key: string, fallback: string) => {
   // @ts-ignore
-  if (typeof process !== 'undefined' && process.env) {
-    // @ts-ignore
-    return process.env[key] || fallback;
-  }
-  return fallback;
+  return import.meta.env[key] || fallback;
 };
 
 const generateId = () => {
@@ -31,7 +27,7 @@ const generateId = () => {
 };
 
 // PASTE YOUR OPENROUTER API KEY HERE
-const API_KEY = getEnv("REACT_APP_OPENROUTER_KEY", "");
+const API_KEY = getEnv("VITE_OPENROUTER_API_KEY", "");
 
 // --- Constants & Configuration ---
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -89,7 +85,7 @@ RULES:
 
 // API CONFIG
 const API_BASE_URL = '/api'; // Relative access for Vercel/Proxy
-const GOOGLE_CLIENT_ID = getEnv("GOOGLE_CLIENT_ID", "716053866816-scs2ioeb9ubdj39ffs7nitu749rp1cil.apps.googleusercontent.com");
+const GOOGLE_CLIENT_ID = getEnv("VITE_GOOGLE_CLIENT_ID", "716053866816-scs2ioeb9ubdj39ffs7nitu749rp1cil.apps.googleusercontent.com");
 
 
 // --- Types ---
@@ -194,7 +190,7 @@ const getModeIcon = (mode: AppMode) => {
   switch (mode) {
     case 'canvas': return <Zap size={10} className="text-yellow-500" />;
     case 'image': return <Palette size={10} className="text-yellow-500" />;
-    default: return <Terminal size={10} className="text-yellow-500" />;
+    default: return <img src="/logo.png" alt="Logo" className="w-[10px] h-[10px] object-contain" />;
   }
 };
 
@@ -298,8 +294,8 @@ const AuthScreen = ({ onGuest, onGoogleLoginSuccess }: { onGuest: () => void, on
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505] p-4">
       <div className="w-full max-w-md bg-[#0a0a0a] border border-gray-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center text-center">
-        <div className="w-16 h-16 rounded-2xl bg-yellow-500 flex items-center justify-center shadow-lg shadow-yellow-900/30 mb-6">
-          <Terminal size={32} className="text-black" />
+        <div className="w-16 h-16 rounded-2xl bg-yellow-500 flex items-center justify-center shadow-lg shadow-yellow-900/30 mb-6 overflow-hidden">
+          <img src="/logo.png" alt="DarkPixels Logo" className="w-full h-full object-cover" />
         </div>
         <h1 className="text-3xl font-bold text-white mb-2">DarkPixels AI</h1>
         <p className="text-gray-500 mb-8">Unrestricted Intelligence Interface</p>
@@ -386,18 +382,24 @@ const Sidebar = ({
       fixed inset-y-0 left-0 z-40 bg-[#050505] border-r border-gray-800 flex flex-col transition-all duration-300 ease-in-out
       md:relative md:translate-x-0 ${sidebarClasses}
     `}>
-      <div className="p-4 border-b border-gray-800/50 flex items-center justify-between">
-        <button
-          onClick={onNewChat}
-          className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center gap-2 text-sm font-medium border whitespace-nowrap
-             bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border-yellow-500/20
-           `}
-        >
-          <Plus size={16} /> New {appMode === 'canvas' ? 'Project' : (appMode === 'image' ? 'Image' : 'Chat')}
-        </button>
-        <button onClick={onCloseMobile} className="md:hidden p-2 text-gray-500">
-          <X size={20} />
-        </button>
+      <div className="p-4 border-b border-gray-800/50 flex flex-col gap-4">
+        <div className="flex items-center gap-3 px-1">
+          <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-lg object-cover shadow-lg" />
+          <span className="font-bold text-lg tracking-tight text-white italic">DarkPixels AI</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onNewChat}
+            className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center gap-2 text-sm font-medium border whitespace-nowrap
+               bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border-yellow-500/20
+             `}
+          >
+            <Plus size={16} /> New {appMode === 'canvas' ? 'Project' : (appMode === 'image' ? 'Image' : 'Chat')}
+          </button>
+          <button onClick={onCloseMobile} className="md:hidden p-2 text-gray-500">
+            <X size={20} />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-gray-800">
@@ -666,7 +668,7 @@ const SettingsModal = ({
       <div className="w-full max-w-lg bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="p-6 border-b border-gray-800 flex justify-between items-center">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Cpu className="text-yellow-500" /> Configuration
+            <img src="/logo.png" alt="Logo" className="w-5 h-5 rounded-md object-cover" /> Configuration
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={24} /></button>
         </div>
@@ -1261,10 +1263,10 @@ const DarkPixelsInner = () => {
               >
                 <SidebarIcon size={20} />
               </button>
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-colors duration-500
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-colors duration-500 overflow-hidden
                 ${activeColors.bg} ${activeColors.shadow}
               `}>
-                <Terminal size={16} className="text-black" />
+                <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
               </div>
               <div className="hidden sm:block">
                 <h1 className={`font-bold tracking-tight ${activeColors.text}`}>
@@ -1326,7 +1328,7 @@ const DarkPixelsInner = () => {
                     </>
                   ) : (
                     <>
-                      <Terminal size={48} className="text-yellow-500/50" />
+                      <img src="/logo.png" alt="Logo" className="w-12 h-12 rounded-xl mb-2 opacity-80" />
                       <p>Start a new conversation</p>
                     </>
                   )}
