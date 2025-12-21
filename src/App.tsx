@@ -848,224 +848,223 @@ export default function DarkPixelsApp() {
         timestamp: Date.now()
       };
       setMessages(prev => [...prev, errorMsg]);
+    } finally {
+      setIsLoading(false);
     }
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
-const isUserMode = authState === 'user';
+  const isUserMode = authState === 'user';
 
-if (authState === 'loading') return <div className="h-screen bg-black flex items-center justify-center text-gray-500">Loading Core Systems...</div>;
-if (authState === 'auth') return <AuthScreen onGoogleLogin={handleLogin} onGuest={handleGuest} />;
+  if (authState === 'loading') return <div className="h-screen bg-black flex items-center justify-center text-gray-500">Loading Core Systems...</div>;
+  if (authState === 'auth') return <AuthScreen onGoogleLogin={handleLogin} onGuest={handleGuest} />;
 
-return (
-  <div className="flex h-screen bg-[#050505] text-gray-100 font-sans overflow-hidden">
-    {/* Sidebar - Now rendered even on desktop if isOpen is true, but using CSS to toggle visibility */}
-    {authState === 'user' && (
-      <Sidebar
-        isOpen={isSidebarOpen}
-        threads={threads}
-        activeThreadId={currentThreadId}
-        onSelectThread={handleThreadSelect}
-        onNewChat={() => createNewChat(isDevMode)}
-        onDeleteThread={deleteThread}
-        onCloseMobile={() => setIsSidebarOpen(false)}
-        isDevMode={isDevMode}
-      />
-    )}
+  return (
+    <div className="flex h-screen bg-[#050505] text-gray-100 font-sans overflow-hidden">
+      {/* Sidebar - Now rendered even on desktop if isOpen is true, but using CSS to toggle visibility */}
+      {authState === 'user' && (
+        <Sidebar
+          isOpen={isSidebarOpen}
+          threads={threads}
+          activeThreadId={currentThreadId}
+          onSelectThread={handleThreadSelect}
+          onNewChat={() => createNewChat(isDevMode)}
+          onDeleteThread={deleteThread}
+          onCloseMobile={() => setIsSidebarOpen(false)}
+          isDevMode={isDevMode}
+        />
+      )}
 
-    {/* Split Pane: Chat + Canvas */}
-    <div className="flex-1 flex overflow-hidden">
+      {/* Split Pane: Chat + Canvas */}
+      <div className="flex-1 flex overflow-hidden">
 
-      {/* Main Chat Panel */}
-      <div className={`flex-1 flex flex-col h-full relative transition-all duration-300 ${previewCode ? 'border-r border-gray-800' : ''}`}>
+        {/* Main Chat Panel */}
+        <div className={`flex-1 flex flex-col h-full relative transition-all duration-300 ${previewCode ? 'border-r border-gray-800' : ''}`}>
 
-        {/* Header */}
-        <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-10">
-          <div className="flex items-center gap-3">
-            {authState === 'user' && (
-              <button
-                className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 transition-colors"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                title={isSidebarOpen ? "Close Sidebar" : "Open History"}
-              >
-                <SidebarIcon size={20} />
-              </button>
-            )}
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-colors duration-500
+          {/* Header */}
+          <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-10">
+            <div className="flex items-center gap-3">
+              {authState === 'user' && (
+                <button
+                  className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 transition-colors"
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  title={isSidebarOpen ? "Close Sidebar" : "Open History"}
+                >
+                  <SidebarIcon size={20} />
+                </button>
+              )}
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-colors duration-500
                 ${isDevMode ? 'bg-purple-600 shadow-purple-900/20' : 'bg-yellow-500 shadow-yellow-900/20'}
               `}>
-              <Terminal size={16} className={isDevMode ? 'text-white' : 'text-black'} />
+                <Terminal size={16} className={isDevMode ? 'text-white' : 'text-black'} />
+              </div>
+              <div className="hidden sm:block">
+                <h1 className={`font-bold tracking-tight ${isDevMode ? 'text-purple-400' : 'text-white'}`}>
+                  {isDevMode ? 'DarkPixels Dev' : 'DarkPixels'}
+                </h1>
+              </div>
             </div>
-            <div className="hidden sm:block">
-              <h1 className={`font-bold tracking-tight ${isDevMode ? 'text-purple-400' : 'text-white'}`}>
-                {isDevMode ? 'DarkPixels Dev' : 'DarkPixels'}
-              </h1>
-            </div>
-          </div>
 
-          {/* Mode Switcher */}
-          <div className="bg-gray-900 p-1 rounded-lg flex items-center border border-gray-800">
-            <button
-              onClick={() => {
-                if (isDevMode) {
-                  setIsDevMode(false);
-                  createNewChat(false); // Switch to Chat mode, new chat
-                }
-              }}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all
+            {/* Mode Switcher */}
+            <div className="bg-gray-900 p-1 rounded-lg flex items-center border border-gray-800">
+              <button
+                onClick={() => {
+                  if (isDevMode) {
+                    setIsDevMode(false);
+                    createNewChat(false); // Switch to Chat mode, new chat
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all
                    ${!isDevMode ? 'bg-yellow-500 text-black shadow' : 'text-gray-400 hover:text-white'}
                  `}
-            >
-              Chat
-            </button>
-            <button
-              onClick={() => {
-                if (!isDevMode) {
-                  setIsDevMode(true);
-                  createNewChat(true); // Switch to Dev mode, new project
-                }
-              }}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-1
+              >
+                Chat
+              </button>
+              <button
+                onClick={() => {
+                  if (!isDevMode) {
+                    setIsDevMode(true);
+                    createNewChat(true); // Switch to Dev mode, new project
+                  }
+                }}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-1
                    ${isDevMode ? 'bg-purple-600 text-white shadow' : 'text-gray-400 hover:text-white'}
                  `}
-            >
-              <Sparkles size={12} /> Canvas
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button onClick={() => setIsSettingsOpen(true)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"><Settings size={20} /></button>
-            {authState === 'user' && (
-              <button onClick={() => { signOut(auth); setAuthState('auth'); }} className="p-2 hover:bg-gray-800 rounded-lg text-red-400" title="Sign Out"><LogOut size={20} /></button>
-            )}
-          </div>
-        </header>
-
-        {/* Chat Scroll Area */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 scrollbar-thin scrollbar-thumb-gray-800">
-          <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end pb-4">
-            {messages.length === 0 && (
-              <div className="flex-1 flex flex-col items-center justify-center text-gray-600 space-y-4 opacity-50">
-                {isDevMode ? (
-                  <>
-                    <LayoutTemplate size={48} className="text-purple-500/50" />
-                    <p className="text-purple-300/50">DarkPixels Canvas Mode Active</p>
-                    <p className="text-sm">Ask to "Build a website" or "Create a game"</p>
-                  </>
-                ) : (
-                  <>
-                    <Terminal size={48} className="text-yellow-500/50" />
-                    <p>Start a new conversation</p>
-                  </>
-                )}
-              </div>
-            )}
-            {messages.map(m => (
-              <MessageBubble
-                key={m.id}
-                message={m}
-                onPreview={(code) => setPreviewCode(code)}
-                isDevMode={isDevMode}
-              />
-            ))}
-            {isLoading && <div className={`ml-4 text-xs animate-pulse ${isDevMode ? 'text-purple-400' : 'text-yellow-500'}`}>
-              {isDevMode ? 'Generating App...' : 'DarkPixels is thinking...'}
-            </div>}
-            <div ref={messagesEndRef} />
-          </div>
-        </main>
-
-        {/* Input */}
-        <footer className="p-4 border-t border-gray-800 bg-[#050505]">
-          <div className={`max-w-3xl mx-auto relative flex flex-col gap-2 bg-gray-900/50 border rounded-2xl p-2 focus-within:ring-2 transition-all
-               ${isDevMode
-              ? 'border-purple-500/30 focus-within:ring-purple-500/50 focus-within:border-purple-500/50'
-              : 'border-gray-800 focus-within:ring-yellow-500/50 focus-within:border-yellow-500/50'}
-            `}>
-            {/* File Preview Area */}
-            {pendingFile && (
-              <div className="flex items-center gap-3 p-2 mx-2 mt-1 mb-1 bg-black/40 rounded-lg w-fit border border-gray-700 animate-in fade-in zoom-in-95 duration-200">
-                {pendingFile.type === 'image' ? (
-                  <div className="relative group">
-                    <img src={pendingFile.content} alt="Preview" className="h-14 w-14 object-cover rounded-md border border-gray-600" />
-                  </div>
-                ) : (
-                  <div className="h-14 w-14 flex items-center justify-center bg-gray-800 rounded-md border border-gray-600">
-                    <FileText size={24} className="text-gray-400" />
-                  </div>
-                )}
-                <div className="flex flex-col">
-                  <span className="text-xs font-medium text-gray-200 max-w-[150px] truncate">{pendingFile.name}</span>
-                  <span className="text-[10px] text-gray-500">{pendingFile.type === 'image' ? 'Image' : 'Document'}</span>
-                </div>
-                <button
-                  onClick={() => { setPendingFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
-                  className="p-1 hover:bg-gray-700 rounded-full text-gray-400 hover:text-white ml-2"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            )}
-
-            <div className="flex items-end gap-2">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                className="hidden"
-                accept=".txt,.md,.js,.ts,.tsx,.py,.html,.css,.json,.csv,.jpg,.jpeg,.png,.gif,.webp"
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="p-3 text-gray-500 hover:text-gray-300 transition-colors"
-                title="Upload Document or Image"
               >
-                <Paperclip size={20} />
-              </button>
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-                placeholder={isDevMode ? "Describe the app you want to build..." : "Message DarkPixels..."}
-                className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-600 resize-none py-3 max-h-32 min-h-[44px]"
-                rows={1}
-              />
-              <button
-                onClick={handleSend}
-                disabled={isLoading || (!input.trim() && !pendingFile)}
-                className={`p-3 rounded-xl transition-all font-bold 
-                    ${(input.trim() || pendingFile)
-                    ? (isDevMode ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/20' : 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/20')
-                    : 'bg-gray-800 text-gray-500'}
-                  `}
-              >
-                <Send size={20} />
+                <Sparkles size={12} /> Canvas
               </button>
             </div>
+
+            <div className="flex items-center gap-3">
+              <button onClick={() => setIsSettingsOpen(true)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"><Settings size={20} /></button>
+              {authState === 'user' && (
+                <button onClick={() => { signOut(auth); setAuthState('auth'); }} className="p-2 hover:bg-gray-800 rounded-lg text-red-400" title="Sign Out"><LogOut size={20} /></button>
+              )}
+            </div>
+          </header>
+
+          {/* Chat Scroll Area */}
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 scrollbar-thin scrollbar-thumb-gray-800">
+            <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end pb-4">
+              {messages.length === 0 && (
+                <div className="flex-1 flex flex-col items-center justify-center text-gray-600 space-y-4 opacity-50">
+                  {isDevMode ? (
+                    <>
+                      <LayoutTemplate size={48} className="text-purple-500/50" />
+                      <p className="text-purple-300/50">DarkPixels Canvas Mode Active</p>
+                      <p className="text-sm">Ask to "Build a website" or "Create a game"</p>
+                    </>
+                  ) : (
+                    <>
+                      <Terminal size={48} className="text-yellow-500/50" />
+                      <p>Start a new conversation</p>
+                    </>
+                  )}
+                </div>
+              )}
+              {messages.map(m => (
+                <MessageBubble
+                  key={m.id}
+                  message={m}
+                  onPreview={(code) => setPreviewCode(code)}
+                  isDevMode={isDevMode}
+                />
+              ))}
+              {isLoading && <div className={`ml-4 text-xs animate-pulse ${isDevMode ? 'text-purple-400' : 'text-yellow-500'}`}>
+                {isDevMode ? 'Generating App...' : 'DarkPixels is thinking...'}
+              </div>}
+              <div ref={messagesEndRef} />
+            </div>
+          </main>
+
+          {/* Input */}
+          <footer className="p-4 border-t border-gray-800 bg-[#050505]">
+            <div className={`max-w-3xl mx-auto relative flex flex-col gap-2 bg-gray-900/50 border rounded-2xl p-2 focus-within:ring-2 transition-all
+               ${isDevMode
+                ? 'border-purple-500/30 focus-within:ring-purple-500/50 focus-within:border-purple-500/50'
+                : 'border-gray-800 focus-within:ring-yellow-500/50 focus-within:border-yellow-500/50'}
+            `}>
+              {/* File Preview Area */}
+              {pendingFile && (
+                <div className="flex items-center gap-3 p-2 mx-2 mt-1 mb-1 bg-black/40 rounded-lg w-fit border border-gray-700 animate-in fade-in zoom-in-95 duration-200">
+                  {pendingFile.type === 'image' ? (
+                    <div className="relative group">
+                      <img src={pendingFile.content} alt="Preview" className="h-14 w-14 object-cover rounded-md border border-gray-600" />
+                    </div>
+                  ) : (
+                    <div className="h-14 w-14 flex items-center justify-center bg-gray-800 rounded-md border border-gray-600">
+                      <FileText size={24} className="text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex flex-col">
+                    <span className="text-xs font-medium text-gray-200 max-w-[150px] truncate">{pendingFile.name}</span>
+                    <span className="text-[10px] text-gray-500">{pendingFile.type === 'image' ? 'Image' : 'Document'}</span>
+                  </div>
+                  <button
+                    onClick={() => { setPendingFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                    className="p-1 hover:bg-gray-700 rounded-full text-gray-400 hover:text-white ml-2"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+
+              <div className="flex items-end gap-2">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  accept=".txt,.md,.js,.ts,.tsx,.py,.html,.css,.json,.csv,.jpg,.jpeg,.png,.gif,.webp"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-3 text-gray-500 hover:text-gray-300 transition-colors"
+                  title="Upload Document or Image"
+                >
+                  <Paperclip size={20} />
+                </button>
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
+                  placeholder={isDevMode ? "Describe the app you want to build..." : "Message DarkPixels..."}
+                  className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-600 resize-none py-3 max-h-32 min-h-[44px]"
+                  rows={1}
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={isLoading || (!input.trim() && !pendingFile)}
+                  className={`p-3 rounded-xl transition-all font-bold 
+                    ${(input.trim() || pendingFile)
+                      ? (isDevMode ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/20' : 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/20')
+                      : 'bg-gray-800 text-gray-500'}
+                  `}
+                >
+                  <Send size={20} />
+                </button>
+              </div>
+            </div>
+          </footer>
+        </div>
+
+        {/* Canvas Panel (Right Side Split) */}
+        {previewCode && (
+          <div className="w-1/2 min-w-[400px] h-full flex flex-col border-l border-gray-800 bg-[#0a0a0a] shadow-2xl z-20 transition-all duration-300 ease-in-out">
+            <CanvasPanel
+              code={previewCode}
+              onClose={() => setPreviewCode(null)}
+            />
           </div>
-        </footer>
+        )}
       </div>
 
-      {/* Canvas Panel (Right Side Split) */}
-      {previewCode && (
-        <div className="w-1/2 min-w-[400px] h-full flex flex-col border-l border-gray-800 bg-[#0a0a0a] shadow-2xl z-20 transition-all duration-300 ease-in-out">
-          <CanvasPanel
-            code={previewCode}
-            onClose={() => setPreviewCode(null)}
-          />
-        </div>
-      )}
+      {/* Modals */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        settings={settings}
+        onSave={setSettings}
+      />
     </div>
-
-    {/* Modals */}
-    <SettingsModal
-      isOpen={isSettingsOpen}
-      onClose={() => setIsSettingsOpen(false)}
-      settings={settings}
-      onSave={setSettings}
-    />
-  </div>
-);
+  );
 }
