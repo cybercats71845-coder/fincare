@@ -2,15 +2,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GoogleOAuthProvider, GoogleLogin, type CredentialResponse } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 import {
-  Send, Settings, Paperclip, Image as ImageIcon,
-  FileText, X, Moon, Sun, Monitor, Cpu,
-  Download, Trash2, MessageSquare, Terminal,
-  ShieldAlert, Zap, Code, Wind, MessageCircle, BrainCircuit,
-  Database, Cloud, Plus, Sidebar as SidebarIcon, LogIn, User as UserIcon, LogOut,
-  Play, Maximize2, Minimize2, LayoutTemplate, ToggleLeft, ToggleRight, Sparkles,
-  Eye, FileCode, ChevronRight, CheckCircle2, Layout, MessageSquareText, History
+  Send, Settings, Paperclip,
+  FileText, X, Cpu,
+  Download, Trash2,
+  Code, Wind, MessageCircle, BrainCircuit,
+  Plus, Sidebar as SidebarIcon, User as UserIcon, LogOut,
+  LayoutTemplate, Sparkles,
+  Eye, FileCode, Layout, MessageSquareText, History
 } from 'lucide-react';
 // Firebase imports removed
+
+interface User {
+  uid: string;
+  displayName: string;
+  email: string;
+  photoURL: string;
+}
 
 
 /**
@@ -865,7 +872,7 @@ function DarkPixelsInner() {
     }
   };
 
-  const isUserMode = authState === 'user';
+
 
   if (authState === 'loading') return <div className="h-screen bg-black flex items-center justify-center text-gray-500">Loading Core Systems...</div>;
   if (authState === 'auth') return <AuthScreen onGoogleLogin={handleLogin} onGuest={handleGuest} />;
@@ -904,10 +911,10 @@ function DarkPixelsInner() {
                   <SidebarIcon size={20} />
                 </button>
               )}
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-colors duration-500
-                ${isDevMode ? 'bg-purple-600 shadow-purple-900/20' : 'bg-yellow-500 shadow-yellow-900/20'}
+              <div className={`w-8 h-8 rounded-lg overflow-hidden shadow-lg transition-colors duration-500
+                ${isDevMode ? 'shadow-purple-900/20' : 'shadow-yellow-900/20'}
               `}>
-                <Terminal size={16} className={isDevMode ? 'text-white' : 'text-black'} />
+                <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
               </div>
               <div className="hidden sm:block">
                 <h1 className={`font-bold tracking-tight ${isDevMode ? 'text-purple-400' : 'text-white'}`}>
@@ -949,7 +956,7 @@ function DarkPixelsInner() {
             <div className="flex items-center gap-3">
               <button onClick={() => setIsSettingsOpen(true)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"><Settings size={20} /></button>
               {authState === 'user' && (
-                <button onClick={() => { signOut(auth); setAuthState('auth'); }} className="p-2 hover:bg-gray-800 rounded-lg text-red-400" title="Sign Out"><LogOut size={20} /></button>
+                <button onClick={() => { setUser(null); setAuthState('auth'); }} className="p-2 hover:bg-gray-800 rounded-lg text-red-400" title="Sign Out"><LogOut size={20} /></button>
               )}
             </div>
           </header>
@@ -967,7 +974,9 @@ function DarkPixelsInner() {
                     </>
                   ) : (
                     <>
-                      <Terminal size={48} className="text-yellow-500/50" />
+                      <div className="w-12 h-12 rounded-xl overflow-hidden opacity-50 mb-2">
+                        <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+                      </div>
                       <p>Start a new conversation</p>
                     </>
                   )}
