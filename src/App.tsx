@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Send, Paperclip, Image as ImageIcon, X, Moon, Sun, Monitor,
-  Trash2, MessageSquare,
-  ShieldAlert, Code, Wind, MessageCircle, BrainCircuit,
-  Database, Cloud, Plus, Sidebar as SidebarIcon, LogIn, User as UserIcon, LogOut,
-  Play, Maximize2, Minimize2, LayoutTemplate, ToggleLeft, ToggleRight,
-  Eye, ChevronRight, CheckCircle2, Layout, MessageSquareText,
+  Send, Paperclip, Image as ImageIcon, X,
+  Trash2,
+  Code, Wind, MessageCircle, BrainCircuit,
+  Plus, Sidebar as SidebarIcon, User as UserIcon, LogOut,
+  LayoutTemplate,
+  Eye, Layout, MessageSquareText,
   Palette, Loader2, RefreshCw, Copy
 } from 'lucide-react';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
@@ -37,9 +37,6 @@ const API_KEY = getEnv("REACT_APP_CUSTOM_API_KEY", "");
 // 3. TEXT MODEL ID
 // The model ID to use for ALL text, code, and reasoning tasks.
 const TEXT_MODEL_ID = getEnv("REACT_APP_TEXT_MODEL_ID", "");
-
-// Fallback model in case the primary one is busy/down
-const FALLBACK_MODEL_ID = getEnv("REACT_APP_FALLBACK_MODEL_ID", "");
 
 // 4. IMAGE MODEL ID (Optional)
 const IMAGE_MODEL_ID = getEnv("REACT_APP_IMAGE_MODEL_ID", "");
@@ -123,13 +120,6 @@ const buildPromptFromHistory = (systemPrompt: string, messages: Message[], curre
   return prompt;
 };
 
-const getModeColors = (_mode: AppMode) => ({
-  text: 'text-yellow-500',
-  bg: 'bg-yellow-500',
-  border: 'border-yellow-500/50',
-  badge: 'bg-yellow-500/20'
-});
-
 const getModeName = (mode: AppMode) => {
   switch (mode) {
     case 'canvas': return 'DarkPixels Dev';
@@ -190,7 +180,7 @@ const AuthScreen = ({ onGuest, onGoogleLogin }: { onGuest: () => void, onGoogleL
   </div>
 );
 
-const Sidebar = ({ threads, activeThreadId, onSelectThread, onNewChat, isOpen, onCloseMobile, onDeleteThread, appMode }: any) => {
+const Sidebar = ({ threads, activeThreadId, onSelectThread, onNewChat, isOpen, onCloseMobile, onDeleteThread }: any) => {
   const sidebarClasses = isOpen ? "w-[280px] translate-x-0" : "w-0 -translate-x-full opacity-0";
   const devThreads = threads.filter((t: Thread) => t.type === 'dev');
   const imageThreads = threads.filter((t: Thread) => t.type === 'image');
@@ -223,7 +213,6 @@ const Sidebar = ({ threads, activeThreadId, onSelectThread, onNewChat, isOpen, o
 
 const MessageBubble = ({ message, onPreview, appMode, onRetry }: any) => {
   const isUser = message.role === 'user';
-  const colors = getModeColors(appMode);
   const [imgS, setImgS] = useState('loading');
 
   const renderContent = (content: string) => {
@@ -269,8 +258,7 @@ const DarkPixelsInner = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [appMode, setAppMode] = useState<AppMode>('chat');
   const [previewCode, setPreviewCode] = useState<string | null>(null);
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settings] = useState<AppSettings>(DEFAULT_SETTINGS);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -377,7 +365,7 @@ const DarkPixelsInner = () => {
 
   return (
     <div className="flex h-[100dvh] bg-[#050505] text-gray-100 font-sans overflow-hidden">
-      <Sidebar threads={threads} activeThreadId={currentThreadId} onSelectThread={setCurrentThreadId} onNewChat={() => { setCurrentThreadId(null); setMessages([]); setPreviewCode(null); }} isOpen={isSidebarOpen} onCloseMobile={() => setIsSidebarOpen(false)} onDeleteThread={deleteThread} appMode={appMode} />
+      <Sidebar threads={threads} activeThreadId={currentThreadId} onSelectThread={setCurrentThreadId} onNewChat={() => { setCurrentThreadId(null); setMessages([]); setPreviewCode(null); }} isOpen={isSidebarOpen} onCloseMobile={() => setIsSidebarOpen(false)} onDeleteThread={deleteThread} />
       <div className="flex-1 flex flex-col h-full bg-gradient-to-b from-[#050505] to-[#080808] relative overflow-hidden">
         <header className="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-[#050505]/95 z-30 sticky top-0">
           <div className="flex items-center gap-3">
