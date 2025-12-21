@@ -369,8 +369,17 @@ const DarkPixelsInner = () => {
 
   const fetchThreads = async () => {
     if (authState === 'user' && user) {
-      const res = await fetch(`${API_BASE_URL}/threads?userId=${user.uid}`);
-      if (res.ok) setThreads(await res.json());
+      try {
+        const res = await fetch(`${API_BASE_URL}/threads?userId=${user.uid}`);
+        if (!res.ok) throw new Error(`Server Error: ${res.status}`);
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Invalid response format from server");
+        }
+        setThreads(await res.json());
+      } catch (err: any) {
+        console.error("Fetch threads failed:", err);
+      }
     } else if (authState === 'guest') {
       const local = JSON.parse(localStorage.getItem(GUEST_THREADS_KEY) || '[]');
       setThreads(local.sort((a: any, b: any) => b.createdAt - a.createdAt));
@@ -382,8 +391,17 @@ const DarkPixelsInner = () => {
   const loadMessages = async () => {
     if (!currentThreadId) return setMessages([]);
     if (authState === 'user') {
-      const res = await fetch(`${API_BASE_URL}/threads/${currentThreadId}/messages`);
-      if (res.ok) setMessages(await res.json());
+      try {
+        const res = await fetch(`${API_BASE_URL}/threads/${currentThreadId}/messages`);
+        if (!res.ok) throw new Error(`Server Error: ${res.status}`);
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Invalid response format (HTML received)");
+        }
+        setMessages(await res.json());
+      } catch (err: any) {
+        console.error("Load messages failed:", err);
+      }
     } else {
       setMessages(JSON.parse(localStorage.getItem(getGuestMessagesKey(currentThreadId)) || '[]'));
     }
@@ -446,18 +464,19 @@ const DarkPixelsInner = () => {
       } else {
         const res = await fetch(CUSTOM_API_URL, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': API_KEY
-          },
+          headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
           body: JSON.stringify({
-            model: selectedModel,
             prompt: buildPromptFromHistory(currentMode === 'dev' ? DEV_MODE_SYSTEM_PROMPT : settings.systemPrompt, messages, text)
           })
         });
 
+        if (!res.ok) {
+          const textErr = await res.text();
+          throw new Error(textErr.includes("<!DOCTYPE") ? "Server Error: Endpoint not found or returned HTML" : `API Error: ${res.status}`);
+        }
+
         const data = await res.json();
-        if (data.status === 'error' || data.error) throw new Error(data.message || data.error || "API Error");
+        if (data.status === 'error' || data.error) throw new Error(data.message || data.error || "AI Error");
         aiText = data.response || "No response received.";
       }
 
