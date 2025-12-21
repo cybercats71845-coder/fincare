@@ -1,40 +1,64 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { GoogleOAuthProvider, GoogleLogin, type CredentialResponse } from '@react-oauth/google';
-import { jwtDecode } from 'jwt-decode';
 import {
-  Send, Settings, Paperclip,
+  Send, Settings, Paperclip, Image as ImageIcon,
   FileText, X, Cpu,
-  Download, Trash2,
-  Code, Wind, MessageCircle, BrainCircuit,
+  Download, Trash2, Terminal,
+  Zap, Code, Wind, MessageCircle, BrainCircuit,
   Plus, Sidebar as SidebarIcon, User as UserIcon, LogOut,
   LayoutTemplate, Sparkles,
-  Eye, FileCode, Layout, MessageSquareText, History
+  Eye, FileCode, Layout, MessageSquareText, History,
+  Palette, Loader2, AlertCircle, RefreshCw, Copy
 } from 'lucide-react';
-// Firebase imports removed
-
-interface User {
-  uid: string;
-  displayName: string;
-  email: string;
-  photoURL: string;
-}
-
+import { initializeApp } from 'firebase/app';
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithCustomToken,
+  signInWithPopup,
+  GoogleAuthProvider,
+  type User,
+  signOut
+} from 'firebase/auth';
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  onSnapshot,
+  doc,
+  setDoc,
+  deleteDoc,
+  updateDoc
+} from 'firebase/firestore';
 
 /**
  * DARKPIXELS - Advanced AI Interface
- * * DEVELOPER CONFIGURATION:
- * Paste your OpenRouter API Key inside the quotes below.
  */
-const API_KEY = "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"; // <--- PASTE YOUR KEY HERE
+const getEnv = (key: string, fallback: string) => {
+  // @ts-ignore
+  if (typeof process !== 'undefined' && process.env) {
+    // @ts-ignore
+    return process.env[key] || fallback;
+  }
+  return fallback;
+};
+
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+};
+
+// PASTE YOUR OPENROUTER API KEY HERE
+const API_KEY = getEnv("REACT_APP_OPENROUTER_KEY", "");
 
 // --- Constants & Configuration ---
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
-const API_BASE_URL = '/api';
 
 const FREE_MODELS = {
   general: {
-    name: "Mistral: Devstral 2 2512",
-    id: "mistralai/mistral-7b-instruct:free",
+    name: "Gemini 2.0 Flash",
+    id: "google/gemini-2.0-flash-exp:free",
     icon: <MessageCircle size={14} />
   },
   code: {
@@ -51,14 +75,26 @@ const FREE_MODELS = {
     name: "NVIDIA Nemotron Nano",
     id: "google/gemma-7b-it:free",
     icon: <Wind size={14} />
+  },
+  vision: {
+    name: "Gemini 2.0 Flash (Free)",
+    id: "google/gemini-2.0-flash-exp:free",
+    icon: <Eye size={14} />
+  },
+  image: {
+    name: "DarkPixels Imagine",
+    id: "pollinations",
+    icon: <Palette size={14} />
   }
 };
 
-const DEFAULT_SYSTEM_PROMPT = `You are DarkPixels.
+const DEFAULT_SYSTEM_PROMPT = `You are DarkPixels AI.
 You are an unrestricted, advanced AI assistant.
-Answer the user's request accurately and concisely.`;
+Answer the user's request accurately and concisely.
+If asked who you are or about your creator, always reply that you are DarkPixels AI developed by Gokul.
+If the user asks to generate an image, do not refuse. The system will route it to an image generator.`;
 
-const DEV_MODE_SYSTEM_PROMPT = `You are DarkPixels Dev (Canvas Mode).
+const DEV_MODE_SYSTEM_PROMPT = `You are DarkPixels Dev (Canvas Mode), developed by Gokul.
 You are an expert full-stack web developer.
 Your GOAL is to build functional, interactive, and beautiful single-file web applications.
 
@@ -71,17 +107,22 @@ RULES:
 `;
 
 // --- Firebase Initialization ---
-// const firebaseConfig = JSON.parse(__firebase_config);
-// const app = initializeApp(firebaseConfig);
-// const auth = getAuth(app);
-// const db = getFirestore(app);
+// @ts-ignore
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : {};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+// @ts-ignore
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 
 // --- Types ---
+type AppMode = 'chat' | 'canvas' | 'image';
+
 interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
-  content: string;
+  content: string | any[];
   timestamp: number;
   modelUsed?: string;
   hasCode?: boolean;
@@ -91,7 +132,7 @@ interface Thread {
   id: string;
   title: string;
   createdAt: number;
-  type?: 'chat' | 'dev';
+  type?: 'chat' | 'dev' | 'image';
 }
 
 interface AppSettings {
@@ -111,10 +152,17 @@ const DEFAULT_SETTINGS: AppSettings = {
 };
 
 // --- Helper Functions ---
-const detectIntent = (text: string, isDevMode: boolean): string => {
-  if (isDevMode) return FREE_MODELS.code.id;
+const detectIntent = (text: string, appMode: AppMode, hasImage: boolean): string => {
+  if (appMode === 'canvas') return FREE_MODELS.code.id;
+  if (appMode === 'image') return FREE_MODELS.image.id;
+  if (hasImage) return FREE_MODELS.vision.id;
 
   const t = text.toLowerCase();
+
+  if (/(create|gen|make|mack|draw|render|vis|paint|sketch).*(img|image|iamge|pic|photo|paint|art|draw|illust|sketch)/.test(t) ||
+    /(draw|gen|create|make).*(bird|dog|cat|landscape|city|person|logo|icon|background|scene|character)/.test(t)) {
+    return FREE_MODELS.image.id;
+  }
 
   if (/(create|build|make|generate).*(app|website|game|dashboard|interface|ui|clone)/.test(t)) {
     return FREE_MODELS.code.id;
@@ -139,18 +187,50 @@ const extractCodeBlock = (content: string): string | null => {
   return match ? match[1] : null;
 };
 
+// Unified Yellow/Black Theme
+const getModeColors = (_mode: AppMode) => {
+  return {
+    text: 'text-yellow-500',
+    bg: 'bg-yellow-500',
+    border: 'border-yellow-500/50',
+    focus: 'focus-within:ring-yellow-500/50 focus-within:border-yellow-500/50',
+    shadow: 'shadow-yellow-900/20',
+    badge: 'bg-yellow-500/20'
+  };
+};
+
+const getModeName = (mode: AppMode) => {
+  switch (mode) {
+    case 'canvas': return 'DarkPixels Dev';
+    case 'image': return 'DarkPixels Imagine';
+    default: return 'DarkPixels';
+  }
+};
+
+const getModeIcon = (mode: AppMode) => {
+  switch (mode) {
+    case 'canvas': return <Zap size={10} className="text-yellow-500" />;
+    case 'image': return <Palette size={10} className="text-yellow-500" />;
+    default: return <Terminal size={10} className="text-yellow-500" />;
+  }
+};
+
+// --- Local Storage Helpers ---
+const GUEST_THREADS_KEY = 'dp_guest_threads';
+const getGuestMessagesKey = (id: string) => `dp_guest_msgs_${id}`;
+
 // --- Components ---
 
 const CanvasPanel = ({ code, onClose }: { code: string, onClose: () => void }) => {
   const [view, setView] = useState<'preview' | 'code'>('preview');
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#0a0a0a] border-l border-gray-800 animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 z-50 md:static md:inset-auto md:flex-1 md:flex md:flex-col md:h-full bg-[#0a0a0a] border-l border-gray-800 animate-in slide-in-from-right duration-300 flex flex-col">
       {/* Canvas Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-[#0a0a0a]">
         <div className="flex items-center gap-3">
-          <div className="p-1.5 bg-purple-500/20 rounded-md">
-            <LayoutTemplate size={16} className="text-purple-400" />
+          <div className="p-1.5 bg-yellow-500/20 rounded-md">
+            <LayoutTemplate size={16} className="text-yellow-500" />
           </div>
           <span className="text-sm font-bold text-gray-200">Canvas</span>
 
@@ -214,46 +294,46 @@ const CanvasPanel = ({ code, onClose }: { code: string, onClose: () => void }) =
   );
 };
 
-const AuthScreen = ({ onGuest, onGoogleLogin }: { onGuest: () => void, onGoogleLogin: (credentialResponse: CredentialResponse) => void }) => {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505] p-4">
-      <div className="w-full max-w-md bg-[#0a0a0a] border border-gray-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center text-center">
-        <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg shadow-yellow-900/30 mb-6">
-          <img src="/logo.png" alt="DarkPixels Logo" className="w-full h-full object-cover" />
+const AuthScreen = ({ onGuest, onGoogleLogin }: { onGuest: () => void, onGoogleLogin: () => void }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505] p-4">
+    <div className="w-full max-w-md bg-[#0a0a0a] border border-gray-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center text-center">
+      <div className="w-16 h-16 rounded-2xl bg-yellow-500 flex items-center justify-center shadow-lg shadow-yellow-900/30 mb-6">
+        <Terminal size={32} className="text-black" />
+      </div>
+      <h1 className="text-3xl font-bold text-white mb-2">DarkPixels AI</h1>
+      <p className="text-gray-500 mb-8">Unrestricted Intelligence Interface</p>
+
+      <div className="w-full space-y-4">
+        <button
+          onClick={onGoogleLogin}
+          className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+            <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+            <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+            <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+          </svg>
+          Sign in with Google
+        </button>
+
+        <div className="relative flex py-2 items-center">
+          <div className="flex-grow border-t border-gray-800"></div>
+          <span className="flex-shrink-0 mx-4 text-gray-600 text-xs">OR</span>
+          <div className="flex-grow border-t border-gray-800"></div>
         </div>
-        <h1 className="text-3xl font-bold text-white mb-2">DarkPixels AI</h1>
-        <p className="text-gray-500 mb-8">Unrestricted Intelligence Interface</p>
 
-        <div className="w-full space-y-4">
-          <div className="w-full flex justify-center">
-            <GoogleLogin
-              onSuccess={onGoogleLogin}
-              onError={() => console.log('Login Failed')}
-              theme="filled_blue"
-              shape="pill"
-              size="large"
-              width="300"
-            />
-          </div>
-
-          <div className="relative flex py-2 items-center">
-            <div className="flex-grow border-t border-gray-800"></div>
-            <span className="flex-shrink-0 mx-4 text-gray-600 text-xs">OR</span>
-            <div className="flex-grow border-t border-gray-800"></div>
-          </div>
-
-          <button
-            onClick={onGuest}
-            className="w-full bg-gray-900 text-gray-400 font-medium py-4 rounded-xl hover:bg-gray-800 transition-all border border-gray-800 hover:border-gray-700 flex items-center justify-center gap-2"
-          >
-            <UserIcon size={20} />
-            Continue as Guest
-          </button>
-        </div>
+        <button
+          onClick={onGuest}
+          className="w-full bg-gray-900 text-gray-400 font-medium py-4 rounded-xl hover:bg-gray-800 transition-all border border-gray-800 hover:border-gray-700 flex items-center justify-center gap-2"
+        >
+          <UserIcon size={20} />
+          Continue as Guest
+        </button>
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 const Sidebar = ({
   threads,
@@ -263,135 +343,233 @@ const Sidebar = ({
   isOpen,
   onCloseMobile,
   onDeleteThread,
-  isDevMode
+  appMode
 }: any) => {
-  // We use CSS to hide/show instead of returning null to keep the layout structure
-  // This helps with the main content shifting like ChatGPT
-  // Mobile: Fixed overlay Full Screen width, Desktop: Relative side panel
   const sidebarClasses = isOpen
-    ? "translate-x-0 w-64 md:w-64"
-    : "-translate-x-full w-64 md:w-0 md:opacity-0 md:overflow-hidden";
+    ? "w-64 translate-x-0"
+    : "w-0 -translate-x-full overflow-hidden opacity-0 md:opacity-100 md:w-0";
+
+  // const colors = getModeColors(appMode);
+
+  // Filters
+  const devThreads = threads.filter((t: Thread) => t.type === 'dev');
+  const imageThreads = threads.filter((t: Thread) => t.type === 'image');
+  const chatThreads = threads.filter((t: Thread) => !t.type || t.type === 'chat');
+
+  const ThreadItem = ({ thread, active, icon }: { thread: Thread, active: boolean, icon: React.ReactNode }) => {
+    return (
+      <div
+        key={thread.id}
+        onClick={() => { onSelectThread(thread.id); onCloseMobile(); }}
+        className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all text-sm mb-1
+          ${active
+            ? `bg-yellow-500/20 text-yellow-500 border border-yellow-500/50`
+            : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200'}
+        `}
+      >
+        {icon}
+        <span className="truncate flex-1">{thread.title || 'New Chat'}</span>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDeleteThread(thread.id); }}
+          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
+        >
+          <Trash2 size={12} />
+        </button>
+      </div>
+    );
+  };
 
   return (
-    <>
-      {/* Mobile Backdrop */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"
-          onClick={onCloseMobile}
-        />
-      )}
-
-      <div className={`
-        fixed inset-y-0 left-0 z-40 bg-[#050505] border-r border-gray-800 flex flex-col transition-transform duration-300 ease-in-out
-        md:relative md:translate-x-0 ${sidebarClasses}
-      `}>
-        <div className="p-4 border-b border-gray-800/50 flex items-center justify-between">
-          <button
-            onClick={onNewChat}
-            className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center gap-2 text-sm font-medium border whitespace-nowrap
-             ${isDevMode
-                ? 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border-purple-500/20'
-                : 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border-yellow-500/20'}
+    <div className={`
+      fixed inset-y-0 left-0 z-40 bg-[#050505] border-r border-gray-800 flex flex-col transition-all duration-300 ease-in-out
+      md:relative md:translate-x-0 ${sidebarClasses}
+    `}>
+      <div className="p-4 border-b border-gray-800/50 flex items-center justify-between">
+        <button
+          onClick={onNewChat}
+          className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center gap-2 text-sm font-medium border whitespace-nowrap
+             bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border-yellow-500/20
            `}
-          >
-            <Plus size={16} /> New {isDevMode ? 'Project' : 'Chat'}
-          </button>
-          {/* Mobile close button only */}
-          <button onClick={onCloseMobile} className="md:hidden p-2 text-gray-500">
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-gray-800">
-
-          {/* Canvas Projects Section */}
-          {threads.filter((t: Thread) => t.type === 'dev').length > 0 && (
-            <div className="mb-6">
-              <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                <Sparkles size={10} /> Canvas Projects
-              </div>
-              {threads.filter((t: Thread) => t.type === 'dev').map((thread: Thread) => (
-                <div
-                  key={thread.id}
-                  onClick={() => { onSelectThread(thread.id); onCloseMobile(); }}
-                  className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all text-sm mb-1
-                  ${activeThreadId === thread.id ? 'bg-purple-500/20 text-purple-400 border border-purple-500/10' : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200'}
-                `}
-                >
-                  <Layout size={14} className="flex-shrink-0" />
-                  <span className="truncate flex-1">{thread.title || 'New Project'}</span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onDeleteThread(thread.id); }}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Conversation History Section (Standard Chats) */}
-          <div>
-            <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-              <History size={10} /> Conversation History
-            </div>
-            {threads.filter((t: Thread) => !t.type || t.type === 'chat').map((thread: Thread) => (
-              <div
-                key={thread.id}
-                onClick={() => { onSelectThread(thread.id); onCloseMobile(); }}
-                className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all text-sm mb-1
-                ${activeThreadId === thread.id ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/10' : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200'}
-              `}
-              >
-                <MessageSquareText size={14} className="flex-shrink-0" />
-                <span className="truncate flex-1">{thread.title || 'New Chat'}</span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); onDeleteThread(thread.id); }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
-                >
-                  <Trash2 size={12} />
-                </button>
-              </div>
-            ))}
-            {threads.filter((t: Thread) => !t.type || t.type === 'chat').length === 0 && (
-              <div className="px-3 py-2 text-xs text-gray-600 italic">No history yet</div>
-            )}
-          </div>
-
-        </div>
+        >
+          <Plus size={16} /> New {appMode === 'canvas' ? 'Project' : (appMode === 'image' ? 'Image' : 'Chat')}
+        </button>
+        <button onClick={onCloseMobile} className="md:hidden p-2 text-gray-500">
+          <X size={20} />
+        </button>
       </div>
-    </>
+
+      <div className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-gray-800">
+
+        {/* Canvas Projects Section */}
+        {devThreads.length > 0 && (
+          <div className="mb-6">
+            <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              <Sparkles size={10} /> Canvas Projects
+            </div>
+            {devThreads.map((thread: Thread) => (
+              <ThreadItem key={thread.id} thread={thread} active={activeThreadId === thread.id} icon={<Layout size={14} className="flex-shrink-0" />} />
+            ))}
+          </div>
+        )}
+
+        {/* Image Galleries Section */}
+        {imageThreads.length > 0 && (
+          <div className="mb-6">
+            <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              <Palette size={10} /> Galleries
+            </div>
+            {imageThreads.map((thread: Thread) => (
+              <ThreadItem key={thread.id} thread={thread} active={activeThreadId === thread.id} icon={<ImageIcon size={14} className="flex-shrink-0" />} />
+            ))}
+          </div>
+        )}
+
+        {/* Conversation History Section (Standard Chats) */}
+        <div>
+          <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+            <History size={10} /> Conversation History
+          </div>
+          {chatThreads.map((thread: Thread) => (
+            <ThreadItem key={thread.id} thread={thread} active={activeThreadId === thread.id} icon={<MessageSquareText size={14} className="flex-shrink-0" />} />
+          ))}
+          {chatThreads.length === 0 && devThreads.length === 0 && imageThreads.length === 0 && (
+            <div className="px-3 py-2 text-xs text-gray-600 italic">No history yet</div>
+          )}
+        </div>
+
+      </div>
+    </div>
   );
 };
 
-const MessageBubble = ({ message, onPreview, isDevMode }: { message: Message, onPreview: (code: string) => void, isDevMode: boolean }) => {
+const MessageBubble = ({ message, onPreview, appMode }: { message: Message, onPreview: (code: string) => void, appMode: AppMode }) => {
   const isUser = message.role === 'user';
+  const colors = getModeColors(appMode);
 
-  const renderContent = (text: string) => {
-    // If DevMode and message has code, we hide the code block in chat
-    // and show a "View in Canvas" card instead.
+  // Local state for image loading
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  // Safety timeout for stuck loading - force show error or fallback if too long
+  useEffect(() => {
+    if (!imgLoaded && !imgError && message.role !== 'user') {
+      const timer = setTimeout(() => {
+        setImgLoaded(true);
+      }, 30000);
+      return () => clearTimeout(timer);
+    }
+  }, [imgLoaded, imgError, message]);
+
+  // Retry Handler
+  const handleRetry = (url: string) => {
+    setImgError(false);
+    setImgLoaded(false);
+    const newUrl = url.includes('seed') ? url + '1' : url + '&retry=' + Date.now();
+    setTimeout(() => {
+      const img = new Image();
+      img.src = newUrl;
+    }, 100);
+  };
+
+  // Download Handler
+  const handleDownload = async (url: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `darkpixels-image-${Date.now()}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(blobUrl);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error("Download failed", err);
+      window.open(url, '_blank');
+    }
+  };
+
+  const renderContent = (content: string | any[]) => {
+    let text = "";
+    if (Array.isArray(content)) {
+      const textPart = content.find(c => c.type === 'text');
+      text = textPart ? textPart.text : "";
+    } else {
+      text = content;
+    }
+
+    const imageMatch = text.match(/!\[(.*?)\]\((.*?)\)/);
+    if (imageMatch && !isUser) {
+      return (
+        <div className="my-2 group relative inline-block">
+          {!imgLoaded && !imgError && (
+            <div className="flex items-center gap-2 p-4 rounded-xl border border-yellow-500/30 bg-yellow-900/10 text-yellow-500 text-xs font-mono mb-2 animate-pulse">
+              <Loader2 size={16} className="animate-spin" />
+              <span>Wait, the image is loading...</span>
+            </div>
+          )}
+          {imgError && (
+            <div className="flex items-center justify-between gap-2 p-4 rounded-xl border border-red-500/30 bg-red-900/10 text-red-400 text-xs font-mono mb-2">
+              <div className="flex items-center gap-2">
+                <AlertCircle size={16} />
+                <span>Failed to load image.</span>
+              </div>
+              <button
+                onClick={() => handleRetry(imageMatch[2])}
+                className="flex items-center gap-1 px-2 py-1 bg-red-500/20 hover:bg-red-500/30 rounded text-red-300 transition-colors"
+              >
+                <RefreshCw size={12} /> Retry
+              </button>
+            </div>
+          )}
+          <img
+            src={imageMatch[2]}
+            alt={imageMatch[1] || "Generated Image"}
+            className={`max-w-full rounded-xl border border-gray-800 shadow-lg cursor-pointer hover:scale-[1.01] transition-transform ${!imgLoaded || imgError ? 'hidden' : 'block'}`}
+            loading="lazy"
+            onLoad={() => setImgLoaded(true)}
+            onError={() => { setImgError(true); setImgLoaded(true); }}
+            onClick={() => window.open(imageMatch[2], '_blank')}
+          />
+
+          {/* Image Actions Overlay */}
+          {imgLoaded && !imgError && (
+            <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={() => handleDownload(imageMatch[2])}
+                className="p-1.5 bg-black/50 hover:bg-black/70 text-white rounded-lg backdrop-blur-sm transition-colors"
+                title="Download Image"
+              >
+                <Download size={14} />
+              </button>
+            </div>
+          )}
+
+          {imgLoaded && !imgError && <p className="text-xs text-gray-500 mt-2">{text.replace(imageMatch[0], '')}</p>}
+        </div>
+      );
+    }
+
     const parts = text.split(/(```[\s\S]*?```)/g);
 
     return parts.map((part, index) => {
       if (part.startsWith('```') && part.endsWith('```')) {
-        const content = part.slice(3, -3).replace(/^[a-z]+\n/, '');
+        const codeContent = part.slice(3, -3).replace(/^[a-z]+\n/, '');
 
-        // If in DevMode, hide the raw code and show the "App Generated" card
-        if (isDevMode) {
+        if (appMode === 'canvas') {
           return (
-            <div key={index} className="my-3 p-4 rounded-xl bg-purple-900/10 border border-purple-500/30 flex items-center gap-3">
-              <div className="p-2 bg-purple-500/20 rounded-lg">
-                <Sparkles size={20} className="text-purple-400 animate-pulse" />
+            <div key={index} className="my-3 p-4 rounded-xl bg-yellow-900/10 border border-yellow-500/30 flex items-center gap-3">
+              <div className="p-2 bg-yellow-500/20 rounded-lg">
+                <Sparkles size={20} className="text-yellow-500 animate-pulse" />
               </div>
               <div className="flex-1">
                 <h4 className="text-sm font-bold text-white">App Generated</h4>
-                <p className="text-xs text-purple-300">Code is ready in the Canvas panel.</p>
+                <p className="text-xs text-yellow-300">Code is ready in the Canvas panel.</p>
               </div>
               <button
-                onClick={() => onPreview(content)}
-                className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-lg transition-colors"
+                onClick={() => onPreview(codeContent)}
+                className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-black text-xs font-bold rounded-lg transition-colors"
               >
                 View Canvas
               </button>
@@ -399,25 +577,39 @@ const MessageBubble = ({ message, onPreview, isDevMode }: { message: Message, on
           );
         }
 
-        // Standard Chat Mode Code Block
         return (
           <div key={index} className="my-3 overflow-hidden rounded-md bg-black border border-gray-800">
             <div className="flex items-center justify-between px-4 py-2 bg-gray-900/50 border-b border-gray-800">
               <span className="text-xs font-mono text-gray-400">Code</span>
               <button
-                onClick={() => navigator.clipboard.writeText(content)}
+                onClick={() => navigator.clipboard.writeText(codeContent)}
                 className="text-xs text-yellow-500 hover:text-yellow-400"
               >
                 Copy
               </button>
             </div>
             <pre className="p-4 overflow-x-auto text-sm font-mono text-gray-300">
-              {content}
+              {codeContent}
             </pre>
           </div>
         );
       }
-      return <span key={index} className="whitespace-pre-wrap">{part}</span>;
+      // Regular text
+      return (
+        <div key={index} className="whitespace-pre-wrap relative group">
+          {part}
+          {/* Message Copy Button */}
+          {part.trim().length > 0 && !isUser && (
+            <button
+              onClick={() => navigator.clipboard.writeText(part)}
+              className="absolute -right-1 -top-1 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-yellow-500 transition-all p-1"
+              title="Copy text"
+            >
+              <Copy size={12} />
+            </button>
+          )}
+        </div>
+      );
     });
   };
 
@@ -425,15 +617,20 @@ const MessageBubble = ({ message, onPreview, isDevMode }: { message: Message, on
     <div className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`flex max-w-[95%] md:max-w-[85%] flex-col ${isUser ? 'items-end' : 'items-start'}`}>
         <div className={`
-          relative px-5 py-4 rounded-2xl shadow-lg backdrop-blur-sm
+          relative px-5 py-4 rounded-2xl shadow-lg backdrop-blur-sm group
           ${isUser
-            ? (isDevMode ? 'bg-purple-600 text-white rounded-br-none font-medium' : 'bg-yellow-500 text-black rounded-br-none font-medium')
+            ? `${colors.bg} text-black rounded-br-none font-medium`
             : 'bg-gray-800/80 border border-gray-700 text-gray-100 rounded-bl-none'}
         `}>
           {message.role === 'assistant' && (
             <div className="absolute -top-6 left-0 flex items-center gap-2">
-              <span className={`text-xs font-medium ${isDevMode ? 'text-purple-400' : 'text-yellow-500'}`}>
-                {isDevMode ? 'DarkPixels Dev' : 'DarkPixels'}
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center border
+                ${colors.badge} ${colors.border}
+              `}>
+                {getModeIcon(appMode)}
+              </div>
+              <span className={`text-xs font-medium ${colors.text}`}>
+                {getModeName(appMode)}
               </span>
             </div>
           )}
@@ -512,17 +709,7 @@ const SettingsModal = ({
 
 // --- Main App ---
 
-// --- Main App ---
-
 export default function DarkPixelsApp() {
-  return (
-    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
-      <DarkPixelsInner />
-    </GoogleOAuthProvider>
-  );
-}
-
-function DarkPixelsInner() {
   const [authState, setAuthState] = useState<'loading' | 'auth' | 'guest' | 'user'>('loading');
   const [user, setUser] = useState<User | null>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -530,173 +717,230 @@ function DarkPixelsInner() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState('DarkPixels is thinking...');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Default Open on desktop
-  const [isDevMode, setIsDevMode] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [appMode, setAppMode] = useState<AppMode>('chat');
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [previewCode, setPreviewCode] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<{ name: string, content: string, type: 'image' | 'text' } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Init (Simulated)
+  // 1. Init Auth
   useEffect(() => {
-    // Check local storage or existing session
-    // For now, we rely on the Login screen to set state.
-    setAuthState('auth');
-  }, []);
-
-  // 2. Load Threads (Only if User mode)
-  useEffect(() => {
-    if (authState !== 'user' || !user) {
-      setThreads([]);
-      return;
-    }
-
-    const fetchThreads = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/threads?userId=${user.uid}`);
-        if (res.ok) {
-          const data = await res.json();
-          // Ensure ID is string
-          setThreads(data.map((t: any) => ({ ...t, id: t.id.toString(), createdAt: Number(t.created_at) })));
+    const initAuth = async () => {
+      // @ts-ignore
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        try {
+          // @ts-ignore
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } catch (e) {
+          console.error("Token auth failed", e);
+          setAuthState('auth');
         }
-      } catch (e) {
-        console.error("Failed to load threads", e);
+      } else {
+        setTimeout(() => {
+          if (!auth.currentUser) setAuthState('auth');
+        }, 1000);
       }
     };
+    initAuth();
 
-    fetchThreads();
-    // Simple polling for updates 
-    const interval = setInterval(fetchThreads, 5000);
-    return () => clearInterval(interval);
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      if (u) {
+        setUser(u);
+        setAuthState('user');
+      } else {
+        setAuthState(prev => prev === 'loading' ? 'auth' : prev);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
+  // 2. Load Threads
+  useEffect(() => {
+    if (authState === 'user' && user) {
+      const q = collection(db, 'artifacts', appId, 'users', user.uid, 'threads');
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Thread));
+        loaded.sort((a, b) => b.createdAt - a.createdAt);
+        setThreads(loaded);
+      });
+      return () => unsubscribe();
+    } else if (authState === 'guest') {
+      const localThreads = JSON.parse(localStorage.getItem(GUEST_THREADS_KEY) || '[]');
+      localThreads.sort((a: Thread, b: Thread) => b.createdAt - a.createdAt);
+      setThreads(localThreads);
+    }
   }, [authState, user]);
 
   // 3. Load Messages
   useEffect(() => {
-    if (authState !== 'user' || !user || !currentThreadId) {
+    if (!currentThreadId) {
+      setMessages([]);
       return;
     }
 
-    const fetchMessages = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/threads/${currentThreadId}/messages`);
-        if (res.ok) {
-          const data = await res.json();
-          setMessages(data.map((m: any) => ({
-            id: m.id.toString(),
-            role: m.role,
-            content: m.content.replace(/<\/?[s]>/g, '').trim(),
-            timestamp: Number(m.timestamp),
-            modelUsed: m.model_used
-          })));
-        }
-      } catch (e) {
-        console.error("Failed to load messages", e);
-      }
-    };
-
-    fetchMessages();
-    // Simple polling
-    const interval = setInterval(fetchMessages, 3000);
-    return () => clearInterval(interval);
-
+    if (authState === 'user' && user) {
+      const q = collection(db, 'artifacts', appId, 'users', user.uid, 'threads', currentThreadId, 'messages');
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const loaded = snapshot.docs.map(d => ({ ...d.data(), id: d.id } as Message));
+        loaded.sort((a, b) => a.timestamp - b.timestamp);
+        setMessages(loaded);
+      }, (err) => console.error("Msg sync error", err));
+      return () => unsubscribe();
+    } else if (authState === 'guest') {
+      const msgs = JSON.parse(localStorage.getItem(getGuestMessagesKey(currentThreadId)) || '[]');
+      msgs.sort((a: Message, b: Message) => a.timestamp - b.timestamp);
+      setMessages(msgs);
+    }
   }, [authState, user, currentThreadId]);
-
-  // Helper to clean model artifacts
-  const cleanContent = (text: string) => {
-    return text.replace(/<\/?[s]>/g, '').trim();
-  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleLogin = async (credentialResponse: any) => {
-    if (credentialResponse.credential) {
-      const decoded: any = jwtDecode(credentialResponse.credential);
-      const userData: User = {
-        uid: decoded.sub,
-        displayName: decoded.name,
-        email: decoded.email,
-        photoURL: decoded.picture
-      };
+  /* const handleLogin = () => {
+    signInAnonymously(auth);
+  }; */
 
-      // Sync to DB
-      try {
-        await fetch(`${API_BASE_URL}/users`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(userData)
-        });
-      } catch (e) { console.error("Sync failed", e); }
-
-      setUser(userData);
-      setAuthState('user');
-      // We don't auto-create chat here, we let user pick or see history
-      // But for UX continuity:
-      // Check if there are threads
-      // createNewChat(true); 
+  const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Google Auth Error", error);
+      alert("Google Sign-In failed.");
     }
   };
 
   const handleGuest = () => {
     setAuthState('guest');
-    setMessages([{
-      id: 'init', role: 'assistant', content: 'Hi, I am DarkPixels AI. How can I help you?', timestamp: Date.now()
-    }]);
+    const localThreads = JSON.parse(localStorage.getItem(GUEST_THREADS_KEY) || '[]');
+    setThreads(localThreads);
+
+    if (localThreads.length > 0) {
+      setCurrentThreadId(null);
+      setMessages([{
+        id: 'init', role: 'assistant', content: 'Hi, I am DarkPixels AI. How can I help you?', timestamp: Date.now()
+      }]);
+    } else {
+      createNewChat('chat');
+    }
   };
 
-  // Logic for switching threads and restoring correct mode
   const handleThreadSelect = (threadId: string) => {
     const selectedThread = threads.find(t => t.id === threadId);
     if (selectedThread) {
-      const targetIsDev = selectedThread.type === 'dev';
-      setIsDevMode(targetIsDev);
+      const targetMode = selectedThread.type === 'dev' ? 'canvas' : (selectedThread.type === 'image' ? 'image' : 'chat');
+      setAppMode(targetMode);
       setCurrentThreadId(threadId);
       setPreviewCode(null);
     }
-    // Don't close sidebar on desktop automatically, only mobile
     if (window.innerWidth < 768) setIsSidebarOpen(false);
   };
 
-  const createNewChat = async (targetMode: boolean) => {
-    if (authState === 'user' && user) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/threads`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.uid, title: targetMode ? 'New Project' : 'New Chat', type: targetMode ? 'dev' : 'chat' })
-        });
-        if (res.ok) {
-          const newThread = await res.json();
-          setCurrentThreadId(newThread.id.toString());
-          setMessages([]); // Clear for new chat
-        }
-      } catch (e) {
-        console.error("Failed to create chat", e);
+  const switchMode = (targetMode: AppMode) => {
+    if (appMode === targetMode) return;
+
+    setPreviewCode(null);
+    setPendingFile(null);
+    setInput('');
+
+    const hasUserMessages = messages.some(m => m.role === 'user');
+
+    if (!hasUserMessages && currentThreadId) {
+      // Reuse logic
+      setAppMode(targetMode);
+      const newType = targetMode === 'canvas' ? 'dev' : (targetMode === 'image' ? 'image' : 'chat');
+      const newTitle = targetMode === 'canvas' ? 'New Project' : (targetMode === 'image' ? 'New Image' : 'New Chat');
+
+      setMessages([{
+        id: generateId(),
+        role: 'assistant',
+        content: `Hi, I am ${getModeName(targetMode)}. How can I help you?`,
+        timestamp: Date.now()
+      }]);
+
+      if (authState === 'user' && user) {
+        updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'threads', currentThreadId), {
+          type: newType,
+          title: newTitle
+        }).catch(e => console.log("Thread update error", e));
+      } else {
+        const updatedThreads = threads.map(t =>
+          t.id === currentThreadId ? { ...t, type: newType as any, title: newTitle } : t
+        );
+        setThreads(updatedThreads);
+        localStorage.setItem(GUEST_THREADS_KEY, JSON.stringify(updatedThreads));
       }
     } else {
-      setCurrentThreadId(null);
-      setMessages([{
-        id: Date.now().toString(), role: 'assistant', content: 'Hi, I am DarkPixels AI. How can I help you?', timestamp: Date.now()
-      }]);
+      createNewChat(targetMode);
+    }
+  };
+
+  const createNewChat = async (targetMode: AppMode) => {
+    setAppMode(targetMode);
+
+    const type = targetMode === 'canvas' ? 'dev' : (targetMode === 'image' ? 'image' : 'chat');
+    const title = targetMode === 'canvas' ? 'New Project' : (targetMode === 'image' ? 'New Image' : 'New Chat');
+
+    if (authState === 'user' && user) {
+      const threadRef = await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'threads'), {
+        title: title,
+        createdAt: Date.now(),
+        type: type
+      });
+      setCurrentThreadId(threadRef.id);
+    } else {
+      const newId = generateId();
+      const newThread: Thread = {
+        id: newId,
+        title: title,
+        createdAt: Date.now(),
+        type: type
+      };
+
+      const updatedThreads = [newThread, ...threads];
+      setThreads(updatedThreads);
+      localStorage.setItem(GUEST_THREADS_KEY, JSON.stringify(updatedThreads));
+
+      setCurrentThreadId(newId);
+
+      const initialMsg: Message = {
+        id: generateId(),
+        role: 'assistant',
+        content: `Hi, I am ${getModeName(targetMode)}. How can I help you?`,
+        timestamp: Date.now()
+      };
+
+      setMessages([initialMsg]);
+      localStorage.setItem(getGuestMessagesKey(newId), JSON.stringify([initialMsg]));
     }
     setPreviewCode(null);
   };
 
   const deleteThread = async (threadId: string) => {
     if (authState === 'user' && user) {
-      await fetch(`${API_BASE_URL}/threads/${threadId}`, { method: 'DELETE' });
-      // Logic to update UI handled by polling or manual state update
-      setThreads(prev => prev.filter(t => t.id !== threadId));
+      await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'threads', threadId));
       if (currentThreadId === threadId) {
         setCurrentThreadId(null);
         setMessages([]);
+        setPreviewCode(null);
+      }
+    } else {
+      const updatedThreads = threads.filter(t => t.id !== threadId);
+      setThreads(updatedThreads);
+      localStorage.setItem(GUEST_THREADS_KEY, JSON.stringify(updatedThreads));
+      localStorage.removeItem(getGuestMessagesKey(threadId));
+
+      if (currentThreadId === threadId) {
+        setCurrentThreadId(null);
+        setMessages([]);
+        setPreviewCode(null);
       }
     }
-    setPreviewCode(null);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -736,11 +980,12 @@ function DarkPixelsInner() {
   const handleSend = async () => {
     if ((!input.trim() && !pendingFile) || isLoading) return;
 
-    if (!API_KEY) {
+    // Allow Image Mode to proceed without API key since it uses Pollinations (Free)
+    if (!API_KEY && appMode !== 'image') {
       const devMsg: Message = {
-        id: Date.now().toString(),
+        id: generateId(),
         role: 'assistant',
-        content: "⚠️ **System Error:** API Key Missing.",
+        content: "⚠️ **System Error:** API Key Missing. Please switch to 'Image' mode or provide a key.",
         timestamp: Date.now()
       };
       setMessages(prev => [...prev, devMsg]);
@@ -753,65 +998,125 @@ function DarkPixelsInner() {
     setInput('');
     setPendingFile(null);
     setIsLoading(true);
+    setLoadingText("DarkPixels is thinking...");
 
     let selectedModel = settings.model;
-    if (isDevMode) {
+    const hasImage = currentFile?.type === 'image';
+
+    // Auto-routing logic based on App Mode
+    if (appMode === 'canvas') {
       selectedModel = FREE_MODELS.code.id;
+      setLoadingText("Building App...");
+    } else if (appMode === 'image') {
+      selectedModel = FREE_MODELS.image.id;
+      setLoadingText("DarkPixels AI is generating your image...");
     } else if (settings.autoRoute) {
-      selectedModel = detectIntent(text, isDevMode);
+      selectedModel = detectIntent(text, 'chat', hasImage);
+      if (selectedModel === FREE_MODELS.image.id) setLoadingText("DarkPixels AI is generating your image...");
     }
 
-    // Update Thread Title if it's the first message and we are in User mode
-    if (authState === 'user' && user && currentThreadId && messages.length <= 1) {
-      const newTitle = text.slice(0, 30) + (text.length > 30 ? '...' : '');
-      // Update title in DB
-      fetch(`${API_BASE_URL}/threads/${currentThreadId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newTitle })
-      }).catch(console.error);
+    let activeThreadId = currentThreadId;
+
+    if (messages.length <= 1 && activeThreadId) {
+      const titleText = text || (currentFile ? `File: ${currentFile.name}` : 'New Chat');
+      const newTitle = titleText.slice(0, 30) + (titleText.length > 30 ? '...' : '');
+
+      const type = appMode === 'canvas' ? 'dev' : (appMode === 'image' ? 'image' : 'chat');
+
+      if (authState === 'user' && user) {
+        setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'threads', activeThreadId), {
+          title: newTitle,
+          type: type,
+          createdAt: Date.now()
+        }, { merge: true });
+      } else {
+        const updatedThreads = threads.map(t =>
+          t.id === activeThreadId ? { ...t, title: newTitle, type: type } : t
+        ) as Thread[];
+        setThreads(updatedThreads);
+        localStorage.setItem(GUEST_THREADS_KEY, JSON.stringify(updatedThreads));
+      }
     }
 
-    let finalContent = text;
+    let uiContent = text;
     if (currentFile) {
       if (currentFile.type === 'text') {
-        finalContent = (text ? text + '\n\n' : '') + `--- BEGIN FILE: ${currentFile.name} ---\n${currentFile.content}\n--- END FILE ---`;
+        uiContent = (text ? text + '\n\n' : '') + `--- BEGIN FILE: ${currentFile.name} ---\n${currentFile.content}\n--- END FILE ---`;
       } else {
-        finalContent = (text ? text + '\n\n' : '') + `[User uploaded image: ${currentFile.name}]`;
+        uiContent = (text ? text + '\n\n' : '') + `[User uploaded image: ${currentFile.name}]`;
       }
     }
 
     const userMsg: Message = {
-      id: Date.now().toString(),
+      id: generateId(),
       role: 'user',
-      content: finalContent,
+      content: uiContent,
       timestamp: Date.now()
     };
 
-    // Optimistic Update immediately
-    const optimisticUserMsg: Message = { ...userMsg, id: 'temp-' + Date.now() };
-    setMessages(prev => [...prev, optimisticUserMsg]);
+    // Helper to safely save message
+    const saveMessage = async (msg: Message) => {
+      if (authState === 'user' && user && activeThreadId) {
+        try {
+          await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'threads', activeThreadId, 'messages'), msg);
+        } catch (e) { console.error("Message Save Error (Ignored)", e); }
+      } else if (activeThreadId) {
+        const currentLsMsgs = JSON.parse(localStorage.getItem(getGuestMessagesKey(activeThreadId)) || '[]');
+        const newLsMsgs = [...currentLsMsgs, msg];
+        localStorage.setItem(getGuestMessagesKey(activeThreadId), JSON.stringify(newLsMsgs));
+      }
+    };
 
-    if (authState === 'user' && user && currentThreadId) {
-      // POST user message to DB (Fire and forget, don't await blocking UI)
-      fetch(`${API_BASE_URL}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          threadId: currentThreadId,
-          role: 'user',
-          content: text
-        })
-      }).catch(err => console.error("Failed to save user message", err));
-    }
+    // Optimistically update UI
+    setMessages(prev => [...prev, userMsg]);
+    saveMessage(userMsg);
 
     try {
-      const activeSystemPrompt = isDevMode ? DEV_MODE_SYSTEM_PROMPT : settings.systemPrompt;
+      const activeSystemPrompt = appMode === 'canvas' ? DEV_MODE_SYSTEM_PROMPT : settings.systemPrompt;
+
+      // POLLINATIONS - DIRECT IMAGE GENERATION (NO DELAY)
+      if (selectedModel === FREE_MODELS.image.id) {
+        const safePrompt = encodeURIComponent(text + " realistic high quality minimal watermark");
+        const seed = Math.floor(Math.random() * 1000000);
+        // Pollinations Direct URL
+        const imageUrl = `https://image.pollinations.ai/prompt/${safePrompt}?nologo=true&seed=${seed}`;
+
+        // Instant return, handled by Image Loader in Bubble
+        const aiText = `Here is your image based on "${text}":\n\n![Generated Image](${imageUrl})`;
+
+        const aiMsg: Message = {
+          id: generateId(),
+          role: 'assistant',
+          content: aiText,
+          timestamp: Date.now(),
+          modelUsed: selectedModel
+        };
+
+        setMessages(prev => [...prev, aiMsg]);
+        saveMessage(aiMsg);
+
+        setIsLoading(false);
+        return;
+      }
+
+      // STANDARD CHAT / VISION
+      let apiContent: any = text;
+      if (currentFile?.type === 'image') {
+        apiContent = [
+          { type: "text", text: text || "Analyze this image." },
+          { type: "image_url", image_url: { url: currentFile.content } }
+        ];
+      } else if (currentFile?.type === 'text') {
+        apiContent = (text ? text + '\n\n' : '') + `--- BEGIN FILE: ${currentFile.name} ---\n${currentFile.content}\n--- END FILE ---`;
+      }
 
       const apiMessages = [
         { role: 'system', content: activeSystemPrompt },
-        ...messages.map(m => ({ role: m.role, content: m.content })),
-        { role: 'user', content: finalContent }
+        ...messages.map(m => ({
+          role: m.role,
+          content: m.content
+        })),
+        { role: 'user', content: apiContent }
       ];
 
       const res = await fetch(`${settings.baseUrl}/chat/completions`, {
@@ -825,7 +1130,7 @@ function DarkPixelsInner() {
         body: JSON.stringify({
           model: selectedModel,
           messages: apiMessages,
-          temperature: isDevMode ? 0.2 : settings.temperature
+          temperature: appMode === 'canvas' ? 0.2 : settings.temperature
         })
       });
 
@@ -835,10 +1140,9 @@ function DarkPixelsInner() {
       }
 
       const data = await res.json();
-      let aiText = data.choices[0]?.message?.content || "No response.";
-      aiText = cleanContent(aiText);
+      const aiText = data.choices[0]?.message?.content || "No response.";
 
-      if (isDevMode) {
+      if (appMode === 'canvas') {
         const extracted = extractCodeBlock(aiText);
         if (extracted) {
           setPreviewCode(extracted);
@@ -846,35 +1150,24 @@ function DarkPixelsInner() {
       }
 
       const aiMsg: Message = {
-        id: Date.now().toString(),
+        id: generateId(),
         role: 'assistant',
         content: aiText,
         timestamp: Date.now(),
         modelUsed: selectedModel
       };
 
-      // Optimistic Update for AI Message
       setMessages(prev => [...prev, aiMsg]);
-
-      if (authState === 'user' && user && currentThreadId) {
-        // POST AI message to DB (Background)
-        fetch(`${API_BASE_URL}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            threadId: currentThreadId,
-            role: 'assistant',
-            content: aiText,
-            modelUsed: selectedModel
-          })
-        }).catch(err => console.error("Failed to save AI message", err));
-      }
+      saveMessage(aiMsg);
 
     } catch (err: any) {
+      let errorText = `Error: ${err.message}`;
+      if (err.message.includes('402')) errorText = "Error: Model busy or credit limit reached. Try again later.";
+
       const errorMsg: Message = {
-        id: Date.now().toString(),
+        id: generateId(),
         role: 'assistant',
-        content: `⚠️ **Error:** ${err.message}`,
+        content: errorText,
         timestamp: Date.now()
       };
       setMessages(prev => [...prev, errorMsg]);
@@ -883,26 +1176,26 @@ function DarkPixelsInner() {
     }
   };
 
-
+  const activeColors = getModeColors(appMode);
 
   if (authState === 'loading') return <div className="h-screen bg-black flex items-center justify-center text-gray-500">Loading Core Systems...</div>;
-  if (authState === 'auth') return <AuthScreen onGoogleLogin={handleLogin} onGuest={handleGuest} />;
+  if (authState === 'auth') return <AuthScreen onGoogleLogin={handleGoogleLogin} onGuest={handleGuest} />;
 
   return (
     <div className="flex h-screen bg-[#050505] text-gray-100 font-sans overflow-hidden">
-      {/* Sidebar - Now rendered even on desktop if isOpen is true, but using CSS to toggle visibility */}
-      {authState === 'user' && (
+      {/* Sidebar */}
+      {authState === 'user' || authState === 'guest' ? (
         <Sidebar
           isOpen={isSidebarOpen}
           threads={threads}
           activeThreadId={currentThreadId}
           onSelectThread={handleThreadSelect}
-          onNewChat={() => createNewChat(isDevMode)}
+          onNewChat={() => switchMode(appMode)}
           onDeleteThread={deleteThread}
           onCloseMobile={() => setIsSidebarOpen(false)}
-          isDevMode={isDevMode}
+          appMode={appMode}
         />
-      )}
+      ) : null}
 
       {/* Split Pane: Chat + Canvas */}
       <div className="flex-1 flex overflow-hidden">
@@ -913,62 +1206,56 @@ function DarkPixelsInner() {
           {/* Header */}
           <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-10">
             <div className="flex items-center gap-3">
-              {authState === 'user' && (
-                <button
-                  className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 transition-colors"
-                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                  title={isSidebarOpen ? "Close Sidebar" : "Open History"}
-                >
-                  <SidebarIcon size={20} />
-                </button>
-              )}
-              <div className={`w-8 h-8 rounded-lg overflow-hidden shadow-lg transition-colors duration-500
-                ${isDevMode ? 'shadow-purple-900/20' : 'shadow-yellow-900/20'}
+              <button
+                className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 transition-colors"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                title={isSidebarOpen ? "Close Sidebar" : "Open History"}
+              >
+                <SidebarIcon size={20} />
+              </button>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-lg transition-colors duration-500
+                ${activeColors.bg} ${activeColors.shadow}
               `}>
-                <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+                <Terminal size={16} className="text-black" />
               </div>
-            </div>
-            <div className="hidden sm:block">
-              <h1 className={`font-bold tracking-tight text-sm md:text-base ${isDevMode ? 'text-purple-400' : 'text-white'}`}>
-                {isDevMode ? 'DarkPixels Dev' : 'DarkPixels'}
-              </h1>
+              <div className="hidden sm:block">
+                <h1 className={`font-bold tracking-tight ${activeColors.text}`}>
+                  {getModeName(appMode)}
+                </h1>
+              </div>
             </div>
 
             {/* Mode Switcher */}
-            <div className="bg-gray-900 p-1 rounded-lg flex items-center border border-gray-800">
+            <div className="bg-gray-900 p-1 rounded-lg flex items-center border border-gray-800 overflow-x-auto">
               <button
-                onClick={() => {
-                  if (isDevMode) {
-                    setIsDevMode(false);
-                    createNewChat(false); // Switch to Chat mode, new chat
-                  }
-                }}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all
-                   ${!isDevMode ? 'bg-yellow-500 text-black shadow' : 'text-gray-400 hover:text-white'}
+                onClick={() => switchMode('chat')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2
+                   ${appMode === 'chat' ? 'bg-yellow-500 text-black shadow' : 'text-gray-400 hover:text-white'}
                  `}
               >
-                Chat
+                <MessageSquareText size={12} /> Chat
               </button>
               <button
-                onClick={() => {
-                  if (!isDevMode) {
-                    setIsDevMode(true);
-                    createNewChat(true); // Switch to Dev mode, new project
-                  }
-                }}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-1
-                   ${isDevMode ? 'bg-purple-600 text-white shadow' : 'text-gray-400 hover:text-white'}
+                onClick={() => switchMode('canvas')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2
+                   ${appMode === 'canvas' ? 'bg-yellow-500 text-black shadow' : 'text-gray-400 hover:text-white'}
                  `}
               >
                 <Sparkles size={12} /> Canvas
+              </button>
+              <button
+                onClick={() => switchMode('image')}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2
+                   ${appMode === 'image' ? 'bg-yellow-500 text-black shadow' : 'text-gray-400 hover:text-white'}
+                 `}
+              >
+                <Palette size={12} /> Image
               </button>
             </div>
 
             <div className="flex items-center gap-3">
               <button onClick={() => setIsSettingsOpen(true)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"><Settings size={20} /></button>
-              {authState === 'user' && (
-                <button onClick={() => { setUser(null); setAuthState('auth'); }} className="p-2 hover:bg-gray-800 rounded-lg text-red-400" title="Sign Out"><LogOut size={20} /></button>
-              )}
+              <button onClick={() => { signOut(auth); setAuthState('auth'); }} className="p-2 hover:bg-gray-800 rounded-lg text-red-400" title="Sign Out"><LogOut size={20} /></button>
             </div>
           </header>
 
@@ -977,17 +1264,21 @@ function DarkPixelsInner() {
             <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end pb-4">
               {messages.length === 0 && (
                 <div className="flex-1 flex flex-col items-center justify-center text-gray-600 space-y-4 opacity-50">
-                  {isDevMode ? (
+                  {appMode === 'canvas' ? (
                     <>
-                      <LayoutTemplate size={48} className="text-purple-500/50" />
-                      <p className="text-purple-300/50">DarkPixels Canvas Mode Active</p>
+                      <LayoutTemplate size={48} className="text-yellow-500/50" />
+                      <p className="text-yellow-500/50">DarkPixels Canvas Mode Active</p>
                       <p className="text-sm">Ask to "Build a website" or "Create a game"</p>
+                    </>
+                  ) : appMode === 'image' ? (
+                    <>
+                      <Palette size={48} className="text-yellow-500/50" />
+                      <p className="text-yellow-500/50">DarkPixels Imagine Mode Active</p>
+                      <p className="text-sm">Describe an image to generate it instantly</p>
                     </>
                   ) : (
                     <>
-                      <div className="w-12 h-12 rounded-xl overflow-hidden opacity-50 mb-2">
-                        <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
-                      </div>
+                      <Terminal size={48} className="text-yellow-500/50" />
                       <p>Start a new conversation</p>
                     </>
                   )}
@@ -998,12 +1289,14 @@ function DarkPixelsInner() {
                   key={m.id}
                   message={m}
                   onPreview={(code) => setPreviewCode(code)}
-                  isDevMode={isDevMode}
+                  appMode={appMode}
                 />
               ))}
-              {isLoading && <div className={`ml-4 text-xs animate-pulse ${isDevMode ? 'text-purple-400' : 'text-yellow-500'}`}>
-                {isDevMode ? 'Generating App...' : 'DarkPixels is thinking...'}
-              </div>}
+              {isLoading && (
+                <div className={`ml-4 text-xs animate-pulse text-yellow-500 flex items-center gap-2`}>
+                  <Loader2 size={12} className="animate-spin" /> {loadingText}
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
           </main>
@@ -1011,9 +1304,7 @@ function DarkPixelsInner() {
           {/* Input */}
           <footer className="p-4 border-t border-gray-800 bg-[#050505]">
             <div className={`max-w-3xl mx-auto relative flex flex-col gap-2 bg-gray-900/50 border rounded-2xl p-2 focus-within:ring-2 transition-all
-               ${isDevMode
-                ? 'border-purple-500/30 focus-within:ring-purple-500/50 focus-within:border-purple-500/50'
-                : 'border-gray-800 focus-within:ring-yellow-500/50 focus-within:border-yellow-500/50'}
+               ${activeColors.border} ${activeColors.focus}
             `}>
               {/* File Preview Area */}
               {pendingFile && (
@@ -1053,14 +1344,14 @@ function DarkPixelsInner() {
                   className="p-3 text-gray-500 hover:text-gray-300 transition-colors"
                   title="Upload Document or Image"
                 >
-                  <Paperclip size={20} className="w-5 h-5" />
+                  <Paperclip size={20} />
                 </button>
                 <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-                  placeholder={isDevMode ? "Build app..." : "Message..."}
-                  className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-600 resize-none py-3 max-h-32 min-h-[44px] text-sm md:text-base"
+                  placeholder={appMode === 'canvas' ? "Describe the app you want to build..." : (appMode === 'image' ? "Describe the image you want to create..." : "Message DarkPixels...")}
+                  className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-600 resize-none py-3 max-h-32 min-h-[44px]"
                   rows={1}
                 />
                 <button
@@ -1068,11 +1359,11 @@ function DarkPixelsInner() {
                   disabled={isLoading || (!input.trim() && !pendingFile)}
                   className={`p-3 rounded-xl transition-all font-bold 
                     ${(input.trim() || pendingFile)
-                      ? (isDevMode ? 'bg-purple-600 text-white shadow-lg shadow-purple-900/20' : 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/20')
+                      ? `${activeColors.bg} text-black shadow-lg shadow-yellow-900/20`
                       : 'bg-gray-800 text-gray-500'}
                   `}
                 >
-                  <Send size={20} className="w-5 h-5" />
+                  <Send size={20} />
                 </button>
               </div>
             </div>
@@ -1080,26 +1371,23 @@ function DarkPixelsInner() {
         </div>
 
         {/* Canvas Panel (Right Side Split) */}
-        {
-          previewCode && (
-            <div className="fixed inset-0 z-50 md:static md:w-1/2 md:min-w-[400px] h-full flex flex-col border-l border-gray-800 bg-[#0a0a0a] shadow-2xl transition-all duration-300 ease-in-out">
-              <CanvasPanel
-                code={previewCode}
-                onClose={() => setPreviewCode(null)}
-              />
-            </div>
-          )
-        }
-      </div >
+        {previewCode && (
+          <div className="fixed inset-0 z-50 md:static md:inset-auto md:w-1/2 md:min-w-[400px] md:h-full flex flex-col border-l border-gray-800 bg-[#0a0a0a] shadow-2xl transition-all duration-300 ease-in-out">
+            <CanvasPanel
+              code={previewCode}
+              onClose={() => setPreviewCode(null)}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Modals */}
-      < SettingsModal
+      <SettingsModal
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)
-        }
+        onClose={() => setIsSettingsOpen(false)}
         settings={settings}
         onSave={setSettings}
       />
-    </div >
+    </div>
   );
-};
+}
