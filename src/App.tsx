@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { GoogleOAuthProvider, GoogleLogin, type CredentialResponse } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 import {
   Send, Settings, Paperclip, Image as ImageIcon,
   FileText, X, Moon, Sun, Monitor, Cpu,
@@ -20,6 +22,7 @@ const API_KEY = "sk-or-v1-32d630bc267d59381c8e8e7c7477c589784074f4b61d2ba155dcad
 
 // --- Constants & Configuration ---
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+const API_BASE_URL = '/api';
 
 const FREE_MODELS = {
   general: {
@@ -204,21 +207,7 @@ const CanvasPanel = ({ code, onClose }: { code: string, onClose: () => void }) =
   );
 };
 
-const AuthScreen = ({ onGuest, onGoogleLogin }: { onGuest: () => void, onGoogleLogin: (credentialResponse: any) => void }) => {
-  useEffect(() => {
-    // Initialize Google Sign-In
-    if (window.google && window.google.accounts && window.google.accounts.id) {
-      window.google.accounts.id.initialize({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || "",
-        callback: onGoogleLogin,
-      });
-      window.google.accounts.id.renderButton(
-        document.getElementById("google-signin-button"),
-        { theme: "filled_blue", size: "large", text: "signin_with", width: "100%" }
-      );
-    }
-  }, [onGoogleLogin]);
-
+const AuthScreen = ({ onGuest, onGoogleLogin }: { onGuest: () => void, onGoogleLogin: (credentialResponse: CredentialResponse) => void }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505] p-4">
       <div className="w-full max-w-md bg-[#0a0a0a] border border-gray-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center text-center">
@@ -229,7 +218,16 @@ const AuthScreen = ({ onGuest, onGoogleLogin }: { onGuest: () => void, onGoogleL
         <p className="text-gray-500 mb-8">Unrestricted Intelligence Interface</p>
 
         <div className="w-full space-y-4">
-          <div id="google-signin-button" className="w-full"></div> {/* Google button will render here */}
+          <div className="w-full flex justify-center">
+            <GoogleLogin
+              onSuccess={onGoogleLogin}
+              onError={() => console.log('Login Failed')}
+              theme="filled_blue"
+              shape="pill"
+              size="large"
+              width="300"
+            />
+          </div>
 
           <div className="relative flex py-2 items-center">
             <div className="flex-grow border-t border-gray-800"></div>
@@ -496,7 +494,17 @@ const SettingsModal = ({
 
 // --- Main App ---
 
+// --- Main App ---
+
 export default function DarkPixelsApp() {
+  return (
+    <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID || ""}>
+      <DarkPixelsInner />
+    </GoogleOAuthProvider>
+  );
+}
+
+function DarkPixelsInner() {
   const [authState, setAuthState] = useState<'loading' | 'auth' | 'guest' | 'user'>('loading');
   const [user, setUser] = useState<User | null>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -561,7 +569,7 @@ export default function DarkPixelsApp() {
           setMessages(data.map((m: any) => ({
             id: m.id.toString(),
             role: m.role,
-            content: m.content,
+            content: m.content.replace(/<\/?[s]>/g, '').trim(),
             timestamp: Number(m.timestamp),
             modelUsed: m.model_used
           })));
@@ -577,6 +585,11 @@ export default function DarkPixelsApp() {
     return () => clearInterval(interval);
 
   }, [authState, user, currentThreadId]);
+
+  // Helper to clean model artifacts
+  const cleanContent = (text: string) => {
+    return text.replace(/<\/?[s]>/g, '').trim();
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -757,9 +770,13 @@ export default function DarkPixelsApp() {
       timestamp: Date.now()
     };
 
+    // Optimistic Update immediately
+    const optimisticUserMsg: Message = { ...userMsg, id: 'temp-' + Date.now() };
+    setMessages(prev => [...prev, optimisticUserMsg]);
+
     if (authState === 'user' && user && currentThreadId) {
-      // POST user message to DB
-      await fetch(`${API_BASE_URL}/messages`, {
+      // POST user message to DB (Fire and forget, don't await blocking UI)
+      fetch(`${API_BASE_URL}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -767,12 +784,7 @@ export default function DarkPixelsApp() {
           role: 'user',
           content: text
         })
-      });
-      // We rely on polling to fetch it back, or Optimistically:
-      const optimisticMsg: Message = { ...userMsg, id: 'temp-' + Date.now() };
-      setMessages(prev => [...prev, optimisticMsg]);
-    } else {
-      setMessages(prev => [...prev, userMsg]);
+      }).catch(err => console.error("Failed to save user message", err));
     }
 
     try {
@@ -805,7 +817,8 @@ export default function DarkPixelsApp() {
       }
 
       const data = await res.json();
-      const aiText = data.choices[0]?.message?.content || "No response.";
+      let aiText = data.choices[0]?.message?.content || "No response.";
+      aiText = cleanContent(aiText);
 
       if (isDevMode) {
         const extracted = extractCodeBlock(aiText);
@@ -822,9 +835,12 @@ export default function DarkPixelsApp() {
         modelUsed: selectedModel
       };
 
+      // Optimistic Update for AI Message
+      setMessages(prev => [...prev, aiMsg]);
+
       if (authState === 'user' && user && currentThreadId) {
-        // POST AI message to DB
-        await fetch(`${API_BASE_URL}/messages`, {
+        // POST AI message to DB (Background)
+        fetch(`${API_BASE_URL}/messages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -833,11 +849,7 @@ export default function DarkPixelsApp() {
             content: aiText,
             modelUsed: selectedModel
           })
-        });
-        // Optimistic update not strictly needed if fast enough, but nice to have
-        // But fetch loop will pick it up.
-      } else {
-        setMessages(prev => [...prev, aiMsg]);
+        }).catch(err => console.error("Failed to save AI message", err));
       }
 
     } catch (err: any) {
