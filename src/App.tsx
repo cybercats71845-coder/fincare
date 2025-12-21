@@ -267,50 +267,86 @@ const Sidebar = ({
 }: any) => {
   // We use CSS to hide/show instead of returning null to keep the layout structure
   // This helps with the main content shifting like ChatGPT
+  // Mobile: Fixed overlay Full Screen width, Desktop: Relative side panel
   const sidebarClasses = isOpen
-    ? "w-64 translate-x-0"
-    : "w-0 -translate-x-full overflow-hidden opacity-0 md:opacity-100 md:w-0";
+    ? "translate-x-0 w-64 md:w-64"
+    : "-translate-x-full w-64 md:w-0 md:opacity-0 md:overflow-hidden";
 
   return (
-    <div className={`
-      fixed inset-y-0 left-0 z-40 bg-[#050505] border-r border-gray-800 flex flex-col transition-all duration-300 ease-in-out
-      md:relative md:translate-x-0 ${sidebarClasses}
-    `}>
-      <div className="p-4 border-b border-gray-800/50 flex items-center justify-between">
-        <button
-          onClick={onNewChat}
-          className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center gap-2 text-sm font-medium border whitespace-nowrap
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"
+          onClick={onCloseMobile}
+        />
+      )}
+
+      <div className={`
+        fixed inset-y-0 left-0 z-40 bg-[#050505] border-r border-gray-800 flex flex-col transition-transform duration-300 ease-in-out
+        md:relative md:translate-x-0 ${sidebarClasses}
+      `}>
+        <div className="p-4 border-b border-gray-800/50 flex items-center justify-between">
+          <button
+            onClick={onNewChat}
+            className={`flex-1 py-2 px-3 rounded-lg transition-all flex items-center gap-2 text-sm font-medium border whitespace-nowrap
              ${isDevMode
-              ? 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border-purple-500/20'
-              : 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border-yellow-500/20'}
+                ? 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border-purple-500/20'
+                : 'bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border-yellow-500/20'}
            `}
-        >
-          <Plus size={16} /> New {isDevMode ? 'Project' : 'Chat'}
-        </button>
-        {/* Mobile close button only */}
-        <button onClick={onCloseMobile} className="md:hidden p-2 text-gray-500">
-          <X size={20} />
-        </button>
-      </div>
+          >
+            <Plus size={16} /> New {isDevMode ? 'Project' : 'Chat'}
+          </button>
+          {/* Mobile close button only */}
+          <button onClick={onCloseMobile} className="md:hidden p-2 text-gray-500">
+            <X size={20} />
+          </button>
+        </div>
 
-      <div className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-gray-800">
+        <div className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-gray-800">
 
-        {/* Canvas Projects Section */}
-        {threads.filter((t: Thread) => t.type === 'dev').length > 0 && (
-          <div className="mb-6">
-            <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-              <Sparkles size={10} /> Canvas Projects
+          {/* Canvas Projects Section */}
+          {threads.filter((t: Thread) => t.type === 'dev').length > 0 && (
+            <div className="mb-6">
+              <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                <Sparkles size={10} /> Canvas Projects
+              </div>
+              {threads.filter((t: Thread) => t.type === 'dev').map((thread: Thread) => (
+                <div
+                  key={thread.id}
+                  onClick={() => { onSelectThread(thread.id); onCloseMobile(); }}
+                  className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all text-sm mb-1
+                  ${activeThreadId === thread.id ? 'bg-purple-500/20 text-purple-400 border border-purple-500/10' : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200'}
+                `}
+                >
+                  <Layout size={14} className="flex-shrink-0" />
+                  <span className="truncate flex-1">{thread.title || 'New Project'}</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDeleteThread(thread.id); }}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              ))}
             </div>
-            {threads.filter((t: Thread) => t.type === 'dev').map((thread: Thread) => (
+          )}
+
+          {/* Conversation History Section (Standard Chats) */}
+          <div>
+            <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+              <History size={10} /> Conversation History
+            </div>
+            {threads.filter((t: Thread) => !t.type || t.type === 'chat').map((thread: Thread) => (
               <div
                 key={thread.id}
                 onClick={() => { onSelectThread(thread.id); onCloseMobile(); }}
                 className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all text-sm mb-1
-                  ${activeThreadId === thread.id ? 'bg-purple-500/20 text-purple-400 border border-purple-500/10' : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200'}
-                `}
+                ${activeThreadId === thread.id ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/10' : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200'}
+              `}
               >
-                <Layout size={14} className="flex-shrink-0" />
-                <span className="truncate flex-1">{thread.title || 'New Project'}</span>
+                <MessageSquareText size={14} className="flex-shrink-0" />
+                <span className="truncate flex-1">{thread.title || 'New Chat'}</span>
                 <button
                   onClick={(e) => { e.stopPropagation(); onDeleteThread(thread.id); }}
                   className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
@@ -319,39 +355,14 @@ const Sidebar = ({
                 </button>
               </div>
             ))}
+            {threads.filter((t: Thread) => !t.type || t.type === 'chat').length === 0 && (
+              <div className="px-3 py-2 text-xs text-gray-600 italic">No history yet</div>
+            )}
           </div>
-        )}
 
-        {/* Conversation History Section (Standard Chats) */}
-        <div>
-          <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-            <History size={10} /> Conversation History
-          </div>
-          {threads.filter((t: Thread) => !t.type || t.type === 'chat').map((thread: Thread) => (
-            <div
-              key={thread.id}
-              onClick={() => { onSelectThread(thread.id); onCloseMobile(); }}
-              className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all text-sm mb-1
-                ${activeThreadId === thread.id ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/10' : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200'}
-              `}
-            >
-              <MessageSquareText size={14} className="flex-shrink-0" />
-              <span className="truncate flex-1">{thread.title || 'New Chat'}</span>
-              <button
-                onClick={(e) => { e.stopPropagation(); onDeleteThread(thread.id); }}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
-              >
-                <Trash2 size={12} />
-              </button>
-            </div>
-          ))}
-          {threads.filter((t: Thread) => !t.type || t.type === 'chat').length === 0 && (
-            <div className="px-3 py-2 text-xs text-gray-600 italic">No history yet</div>
-          )}
         </div>
-
       </div>
-    </div>
+    </>
   );
 };
 
@@ -916,11 +927,11 @@ function DarkPixelsInner() {
               `}>
                 <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
               </div>
-              <div className="hidden sm:block">
-                <h1 className={`font-bold tracking-tight ${isDevMode ? 'text-purple-400' : 'text-white'}`}>
-                  {isDevMode ? 'DarkPixels Dev' : 'DarkPixels'}
-                </h1>
-              </div>
+            </div>
+            <div className="hidden sm:block">
+              <h1 className={`font-bold tracking-tight text-sm md:text-base ${isDevMode ? 'text-purple-400' : 'text-white'}`}>
+                {isDevMode ? 'DarkPixels Dev' : 'DarkPixels'}
+              </h1>
             </div>
 
             {/* Mode Switcher */}
@@ -1042,14 +1053,14 @@ function DarkPixelsInner() {
                   className="p-3 text-gray-500 hover:text-gray-300 transition-colors"
                   title="Upload Document or Image"
                 >
-                  <Paperclip size={20} />
+                  <Paperclip size={20} className="w-5 h-5" />
                 </button>
                 <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
-                  placeholder={isDevMode ? "Describe the app you want to build..." : "Message DarkPixels..."}
-                  className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-600 resize-none py-3 max-h-32 min-h-[44px]"
+                  placeholder={isDevMode ? "Build app..." : "Message..."}
+                  className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-600 resize-none py-3 max-h-32 min-h-[44px] text-sm md:text-base"
                   rows={1}
                 />
                 <button
@@ -1061,7 +1072,7 @@ function DarkPixelsInner() {
                       : 'bg-gray-800 text-gray-500'}
                   `}
                 >
-                  <Send size={20} />
+                  <Send size={20} className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -1069,23 +1080,26 @@ function DarkPixelsInner() {
         </div>
 
         {/* Canvas Panel (Right Side Split) */}
-        {previewCode && (
-          <div className="w-1/2 min-w-[400px] h-full flex flex-col border-l border-gray-800 bg-[#0a0a0a] shadow-2xl z-20 transition-all duration-300 ease-in-out">
-            <CanvasPanel
-              code={previewCode}
-              onClose={() => setPreviewCode(null)}
-            />
-          </div>
-        )}
-      </div>
+        {
+          previewCode && (
+            <div className="fixed inset-0 z-50 md:static md:w-1/2 md:min-w-[400px] h-full flex flex-col border-l border-gray-800 bg-[#0a0a0a] shadow-2xl transition-all duration-300 ease-in-out">
+              <CanvasPanel
+                code={previewCode}
+                onClose={() => setPreviewCode(null)}
+              />
+            </div>
+          )
+        }
+      </div >
 
       {/* Modals */}
-      <SettingsModal
+      < SettingsModal
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={() => setIsSettingsOpen(false)
+        }
         settings={settings}
         onSave={setSettings}
       />
-    </div>
+    </div >
   );
-}
+};
