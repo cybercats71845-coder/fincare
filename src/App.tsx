@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Send, Settings, Paperclip, Image as ImageIcon,
-  FileText, X, Moon, Sun, Monitor, Cpu,
-  Download, Trash2, MessageSquare, Terminal,
-  ShieldAlert, Zap, Code, Wind, MessageCircle, BrainCircuit,
+  Send, Paperclip, Image as ImageIcon, X, Moon, Sun, Monitor,
+  Trash2, MessageSquare,
+  ShieldAlert, Code, Wind, MessageCircle, BrainCircuit,
   Database, Cloud, Plus, Sidebar as SidebarIcon, LogIn, User as UserIcon, LogOut,
-  Play, Maximize2, Minimize2, LayoutTemplate, ToggleLeft, ToggleRight, Sparkles,
-  Eye, FileCode, ChevronRight, CheckCircle2, Layout, MessageSquareText, History,
-  Palette, Loader2, AlertCircle, RefreshCw, Copy
+  Play, Maximize2, Minimize2, LayoutTemplate, ToggleLeft, ToggleRight,
+  Eye, ChevronRight, CheckCircle2, Layout, MessageSquareText,
+  Palette, Loader2, RefreshCw, Copy
 } from 'lucide-react';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
@@ -29,13 +28,23 @@ const generateId = () => {
 };
 
 // --- Configuration ---
-const CUSTOM_API_URL = getEnv("VITE_CUSTOM_API_URL", "https://darkpixels.tech/generate");
-const API_KEY = getEnv("VITE_CUSTOM_API_KEY", "GOKUL9025491217");
-const TEXT_MODEL_ID = getEnv("VITE_TEXT_MODEL_ID", "gemma:2b");
-const IMAGE_MODEL_ID = "pollinations";
+// 1. API URL
+const API_URL = getEnv("REACT_APP_CUSTOM_API_URL", "");
+
+// 2. API KEY
+const API_KEY = getEnv("REACT_APP_CUSTOM_API_KEY", "");
+
+// 3. TEXT MODEL ID
+// The model ID to use for ALL text, code, and reasoning tasks.
+const TEXT_MODEL_ID = getEnv("REACT_APP_TEXT_MODEL_ID", "");
+
+// Fallback model in case the primary one is busy/down
+const FALLBACK_MODEL_ID = getEnv("REACT_APP_FALLBACK_MODEL_ID", "");
+
+// 4. IMAGE MODEL ID (Optional)
+const IMAGE_MODEL_ID = getEnv("REACT_APP_IMAGE_MODEL_ID", "");
 const API_BASE_URL = '/api';
-const GOOGLE_CLIENT_ID = getEnv("VITE_GOOGLE_CLIENT_ID", "716053866816-scs2ioeb9ubdj39ffs7nitu749rp1cil.apps.googleusercontent.com");
-const BREADCRUMB_LOGO = "/logo.png";
+const GOOGLE_CLIENT_ID = getEnv("VITE_GOOGLE_CLIENT_ID", "");
 
 const MODELS = {
   general: { name: "DarkPixels AI", id: TEXT_MODEL_ID, icon: <MessageCircle size={14} /> },
@@ -86,7 +95,7 @@ interface AppSettings {
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
-  baseUrl: CUSTOM_API_URL,
+  baseUrl: API_URL,
   model: MODELS.general.id,
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   temperature: 0.7,
@@ -332,7 +341,7 @@ const DarkPixelsInner = () => {
         const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(text)}?nologo=true&seed=${Date.now()}`;
         aiText = `![AI](${url})`;
       } else {
-        const res = await fetch(CUSTOM_API_URL, {
+        const res = await fetch(API_URL, {
           method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
           body: JSON.stringify({ prompt: buildPromptFromHistory(appMode === 'canvas' ? DEV_MODE_SYSTEM_PROMPT : settings.systemPrompt, messages, text) })
         });
