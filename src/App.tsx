@@ -9,26 +9,7 @@ import {
   Eye, FileCode, Layout, MessageSquareText, History,
   Palette, Loader2, AlertCircle, RefreshCw, Copy
 } from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import {
-  getAuth,
-  onAuthStateChanged,
-  signInWithCustomToken,
-  signInWithPopup,
-  GoogleAuthProvider,
-  type User,
-  signOut
-} from 'firebase/auth';
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  onSnapshot,
-  doc,
-  setDoc,
-  deleteDoc,
-  updateDoc
-} from 'firebase/firestore';
+import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
 /**
  * DARKPIXELS - Advanced AI Interface
@@ -106,18 +87,20 @@ RULES:
 5. Wrap code in \`\`\`html ... \`\`\`.
 `;
 
-// --- Firebase Initialization ---
-// @ts-ignore
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? __firebase_config : {};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-// @ts-ignore
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+// API CONFIG
+const API_BASE_URL = '/api'; // Relative access for Vercel/Proxy
+const GOOGLE_CLIENT_ID = getEnv("GOOGLE_CLIENT_ID", "716053866816-scs2ioeb9ubdj39ffs7nitu749rp1cil.apps.googleusercontent.com");
 
 
 // --- Types ---
 type AppMode = 'chat' | 'canvas' | 'image';
+
+interface User {
+  uid: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+}
 
 interface Message {
   id: string;
@@ -294,46 +277,65 @@ const CanvasPanel = ({ code, onClose }: { code: string, onClose: () => void }) =
   );
 };
 
-const AuthScreen = ({ onGuest, onGoogleLogin }: { onGuest: () => void, onGoogleLogin: () => void }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505] p-4">
-    <div className="w-full max-w-md bg-[#0a0a0a] border border-gray-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center text-center">
-      <div className="w-16 h-16 rounded-2xl bg-yellow-500 flex items-center justify-center shadow-lg shadow-yellow-900/30 mb-6">
-        <Terminal size={32} className="text-black" />
-      </div>
-      <h1 className="text-3xl font-bold text-white mb-2">DarkPixels AI</h1>
-      <p className="text-gray-500 mb-8">Unrestricted Intelligence Interface</p>
+const AuthScreen = ({ onGuest, onGoogleLoginSuccess }: { onGuest: () => void, onGoogleLoginSuccess: (user: any) => void }) => {
+  const login = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        // Fetch user info from Google
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+        const info = await res.json();
+        onGoogleLoginSuccess(info);
+      } catch (error) {
+        console.error("Failed to fetch user info", error);
+        alert("Login Failed");
+      }
+    },
+    onError: () => console.log('Login Failed'),
+  });
 
-      <div className="w-full space-y-4">
-        <button
-          onClick={onGoogleLogin}
-          className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24">
-            <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-            <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-            <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-            <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-          </svg>
-          Sign in with Google
-        </button>
-
-        <div className="relative flex py-2 items-center">
-          <div className="flex-grow border-t border-gray-800"></div>
-          <span className="flex-shrink-0 mx-4 text-gray-600 text-xs">OR</span>
-          <div className="flex-grow border-t border-gray-800"></div>
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505] p-4">
+      <div className="w-full max-w-md bg-[#0a0a0a] border border-gray-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center text-center">
+        <div className="w-16 h-16 rounded-2xl bg-yellow-500 flex items-center justify-center shadow-lg shadow-yellow-900/30 mb-6">
+          <Terminal size={32} className="text-black" />
         </div>
+        <h1 className="text-3xl font-bold text-white mb-2">DarkPixels AI</h1>
+        <p className="text-gray-500 mb-8">Unrestricted Intelligence Interface</p>
 
-        <button
-          onClick={onGuest}
-          className="w-full bg-gray-900 text-gray-400 font-medium py-4 rounded-xl hover:bg-gray-800 transition-all border border-gray-800 hover:border-gray-700 flex items-center justify-center gap-2"
-        >
-          <UserIcon size={20} />
-          Continue as Guest
-        </button>
+        <div className="w-full space-y-4">
+          <button
+            onClick={() => login()}
+            className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+              <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+              <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+              <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+            </svg>
+            Sign in with Google
+          </button>
+
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-gray-800"></div>
+            <span className="flex-shrink-0 mx-4 text-gray-600 text-xs">OR</span>
+            <div className="flex-grow border-t border-gray-800"></div>
+          </div>
+
+          <button
+            onClick={onGuest}
+            className="w-full bg-gray-900 text-gray-400 font-medium py-4 rounded-xl hover:bg-gray-800 transition-all border border-gray-800 hover:border-gray-700 flex items-center justify-center gap-2"
+          >
+            <UserIcon size={20} />
+            Continue as Guest
+          </button>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const Sidebar = ({
   threads,
@@ -709,7 +711,7 @@ const SettingsModal = ({
 
 // --- Main App ---
 
-export default function DarkPixelsApp() {
+const DarkPixelsInner = () => {
   const [authState, setAuthState] = useState<'loading' | 'auth' | 'guest' | 'user'>('loading');
   const [user, setUser] = useState<User | null>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -727,74 +729,77 @@ export default function DarkPixelsApp() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Init Auth
+  // 1. Check for existing session
   useEffect(() => {
-    const initAuth = async () => {
-      // @ts-ignore
-      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-        try {
-          // @ts-ignore
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } catch (e) {
-          console.error("Token auth failed", e);
-          setAuthState('auth');
-        }
-      } else {
-        setTimeout(() => {
-          if (!auth.currentUser) setAuthState('auth');
-        }, 1000);
-      }
-    };
-    initAuth();
-
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      if (u) {
-        setUser(u);
+    const savedUser = localStorage.getItem('dp_user');
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        setUser(parsed);
         setAuthState('user');
-      } else {
-        setAuthState(prev => prev === 'loading' ? 'auth' : prev);
+      } catch (e) {
+        setAuthState('auth');
       }
-    });
-    return () => unsubscribe();
+    } else {
+      setAuthState('auth');
+    }
   }, []);
 
   // 2. Load Threads
-  useEffect(() => {
+  const fetchThreads = async () => {
     if (authState === 'user' && user) {
-      const q = collection(db, 'artifacts', appId, 'users', user.uid, 'threads');
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const loaded = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Thread));
-        loaded.sort((a, b) => b.createdAt - a.createdAt);
-        setThreads(loaded);
-      });
-      return () => unsubscribe();
+      try {
+        const res = await fetch(`${API_BASE_URL}/threads?userId=${user.uid}`);
+        if (res.ok) {
+          const data = await res.json();
+          setThreads(data);
+        }
+      } catch (e) {
+        console.error("Threads fetch failed", e);
+      }
     } else if (authState === 'guest') {
       const localThreads = JSON.parse(localStorage.getItem(GUEST_THREADS_KEY) || '[]');
       localThreads.sort((a: Thread, b: Thread) => b.createdAt - a.createdAt);
       setThreads(localThreads);
     }
+  };
+
+  useEffect(() => {
+    fetchThreads();
   }, [authState, user]);
 
   // 3. Load Messages
-  useEffect(() => {
+  const loadMessages = async () => {
     if (!currentThreadId) {
       setMessages([]);
       return;
     }
 
     if (authState === 'user' && user) {
-      const q = collection(db, 'artifacts', appId, 'users', user.uid, 'threads', currentThreadId, 'messages');
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const loaded = snapshot.docs.map(d => ({ ...d.data(), id: d.id } as Message));
-        loaded.sort((a, b) => a.timestamp - b.timestamp);
-        setMessages(loaded);
-      }, (err) => console.error("Msg sync error", err));
-      return () => unsubscribe();
+      try {
+        const res = await fetch(`${API_BASE_URL}/threads/${currentThreadId}/messages`);
+        if (res.ok) {
+          const data = await res.json();
+          setMessages(data);
+        }
+      } catch (e) {
+        console.error("Messages fetch failed", e);
+      }
     } else if (authState === 'guest') {
       const msgs = JSON.parse(localStorage.getItem(getGuestMessagesKey(currentThreadId)) || '[]');
       msgs.sort((a: Message, b: Message) => a.timestamp - b.timestamp);
       setMessages(msgs);
     }
+  };
+
+  useEffect(() => {
+    loadMessages();
+    // Optional: Polling for real-time updates if needed
+    let interval: any;
+    if (authState === 'user' && currentThreadId) {
+      interval = setInterval(loadMessages, 5000);
+    }
+    return () => clearInterval(interval);
   }, [authState, user, currentThreadId]);
 
   useEffect(() => {
@@ -805,13 +810,37 @@ export default function DarkPixelsApp() {
     signInAnonymously(auth);
   }; */
 
-  const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider();
+  const handleLogsout = () => {
+    localStorage.removeItem('dp_user');
+    setUser(null);
+    setAuthState('auth');
+    setMessages([]);
+    setThreads([]);
+  };
+
+  const handleGoogleLoginSuccess = async (googleUser: any) => {
+    // Send to backend to sync
+    const userData: User = {
+      uid: googleUser.sub,
+      email: googleUser.email,
+      displayName: googleUser.name,
+      photoURL: googleUser.picture
+    };
+
     try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Google Auth Error", error);
-      alert("Google Sign-In failed.");
+      const res = await fetch(`${API_BASE_URL}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
+
+      if (res.ok) {
+        setUser(userData);
+        localStorage.setItem('dp_user', JSON.stringify(userData));
+        setAuthState('user');
+      }
+    } catch (e) {
+      console.error("Sync user failed", e);
     }
   };
 
@@ -864,10 +893,11 @@ export default function DarkPixelsApp() {
       }]);
 
       if (authState === 'user' && user) {
-        updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'threads', currentThreadId), {
-          type: newType,
-          title: newTitle
-        }).catch(e => console.log("Thread update error", e));
+        fetch(`${API_BASE_URL}/threads/${currentThreadId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: newTitle })
+        }).then(fetchThreads);
       } else {
         const updatedThreads = threads.map(t =>
           t.id === currentThreadId ? { ...t, type: newType as any, title: newTitle } : t
@@ -887,12 +917,20 @@ export default function DarkPixelsApp() {
     const title = targetMode === 'canvas' ? 'New Project' : (targetMode === 'image' ? 'New Image' : 'New Chat');
 
     if (authState === 'user' && user) {
-      const threadRef = await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'threads'), {
-        title: title,
-        createdAt: Date.now(),
-        type: type
-      });
-      setCurrentThreadId(threadRef.id);
+      try {
+        const res = await fetch(`${API_BASE_URL}/threads`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.uid, title: title })
+        });
+        if (res.ok) {
+          const newThread = await res.json();
+          setCurrentThreadId(newThread.id);
+          fetchThreads();
+        }
+      } catch (e) {
+        console.error("Create thread failed", e);
+      }
     } else {
       const newId = generateId();
       const newThread: Thread = {
@@ -923,7 +961,8 @@ export default function DarkPixelsApp() {
 
   const deleteThread = async (threadId: string) => {
     if (authState === 'user' && user) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'threads', threadId));
+      await fetch(`${API_BASE_URL}/threads/${threadId}`, { method: 'DELETE' });
+      setThreads(prev => prev.filter(t => t.id !== threadId));
       if (currentThreadId === threadId) {
         setCurrentThreadId(null);
         setMessages([]);
@@ -1024,11 +1063,11 @@ export default function DarkPixelsApp() {
       const type = appMode === 'canvas' ? 'dev' : (appMode === 'image' ? 'image' : 'chat');
 
       if (authState === 'user' && user) {
-        setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'threads', activeThreadId), {
-          title: newTitle,
-          type: type,
-          createdAt: Date.now()
-        }, { merge: true });
+        fetch(`${API_BASE_URL}/threads/${activeThreadId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: newTitle })
+        }).then(fetchThreads);
       } else {
         const updatedThreads = threads.map(t =>
           t.id === activeThreadId ? { ...t, title: newTitle, type: type } : t
@@ -1058,7 +1097,16 @@ export default function DarkPixelsApp() {
     const saveMessage = async (msg: Message) => {
       if (authState === 'user' && user && activeThreadId) {
         try {
-          await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'threads', activeThreadId, 'messages'), msg);
+          await fetch(`${API_BASE_URL}/messages`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              threadId: activeThreadId,
+              role: msg.role,
+              content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
+              modelUsed: msg.modelUsed
+            })
+          });
         } catch (e) { console.error("Message Save Error (Ignored)", e); }
       } else if (activeThreadId) {
         const currentLsMsgs = JSON.parse(localStorage.getItem(getGuestMessagesKey(activeThreadId)) || '[]');
@@ -1179,7 +1227,7 @@ export default function DarkPixelsApp() {
   const activeColors = getModeColors(appMode);
 
   if (authState === 'loading') return <div className="h-screen bg-black flex items-center justify-center text-gray-500">Loading Core Systems...</div>;
-  if (authState === 'auth') return <AuthScreen onGoogleLogin={handleGoogleLogin} onGuest={handleGuest} />;
+  if (authState === 'auth') return <AuthScreen onGoogleLoginSuccess={handleGoogleLoginSuccess} onGuest={handleGuest} />;
 
   return (
     <div className="flex h-screen bg-[#050505] text-gray-100 font-sans overflow-hidden">
@@ -1255,7 +1303,7 @@ export default function DarkPixelsApp() {
 
             <div className="flex items-center gap-3">
               <button onClick={() => setIsSettingsOpen(true)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"><Settings size={20} /></button>
-              <button onClick={() => { signOut(auth); setAuthState('auth'); }} className="p-2 hover:bg-gray-800 rounded-lg text-red-400" title="Sign Out"><LogOut size={20} /></button>
+              <button onClick={handleLogsout} className="p-2 hover:bg-gray-800 rounded-lg text-red-400" title="Sign Out"><LogOut size={20} /></button>
             </div>
           </header>
 
@@ -1389,5 +1437,13 @@ export default function DarkPixelsApp() {
         onSave={setSettings}
       />
     </div>
+  );
+};
+
+export default function DarkPixelsApp() {
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <DarkPixelsInner />
+    </GoogleOAuthProvider>
   );
 }
