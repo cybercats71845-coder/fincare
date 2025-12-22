@@ -67,12 +67,12 @@ const GOOGLE_CLIENT_ID = getEnv("VITE_GOOGLE_CLIENT_ID", "");
 
 // --- Dynamic Model Configuration ---
 const MODELS = {
-  general: { name: "General AI", id: TEXT_MODEL_ID, icon: <MessageCircle size={14} /> },
-  code: { name: "Code AI", id: TEXT_MODEL_ID, icon: <Code size={14} /> },
-  deep: { name: "Reasoning AI", id: TEXT_MODEL_ID, icon: <BrainCircuit size={14} /> },
-  fast: { name: "Fast AI", id: TEXT_MODEL_ID, icon: <Wind size={14} /> },
-  vision: { name: "Vision AI", id: TEXT_MODEL_ID, icon: <Eye size={14} /> },
-  image: { name: "Image Generator", id: IMAGE_MODEL_ID, icon: <Palette size={14} /> }
+  general: { name: "DarkPixels Chat", id: TEXT_MODEL_ID, icon: <MessageCircle size={14} /> },
+  code: { name: "DarkPixels Dev", id: TEXT_MODEL_ID, icon: <Code size={14} /> },
+  deep: { name: "DarkPixels Pro", id: TEXT_MODEL_ID, icon: <BrainCircuit size={14} /> },
+  fast: { name: "DarkPixels Lite", id: TEXT_MODEL_ID, icon: <Wind size={14} /> },
+  vision: { name: "DarkPixels Vision", id: TEXT_MODEL_ID, icon: <Eye size={14} /> },
+  image: { name: "DarkPixels Imagine", id: IMAGE_MODEL_ID, icon: <Palette size={14} /> }
 };
 
 const DEFAULT_SYSTEM_PROMPT = `You are DarkPixels AI.
@@ -188,13 +188,6 @@ const getModeColors = (_mode: AppMode) => {
   };
 };
 
-const getModeName = (mode: AppMode) => {
-  switch (mode) {
-    case 'canvas': return 'DarkPixels Dev';
-    case 'image': return 'DarkPixels Imagine';
-    default: return 'DarkPixels';
-  }
-};
 
 const getModeIcon = (mode: AppMode) => {
   switch (mode) {
@@ -208,11 +201,6 @@ const getModeIcon = (mode: AppMode) => {
 const GUEST_THREADS_KEY = 'dp_guest_threads';
 const getGuestMessagesKey = (id: string) => `dp_guest_msgs_${id}`;
 
-const getModelNameById = (id: string) => {
-  if (id === TEXT_MODEL_ID) return MODELS.general.name;
-  const found = Object.values(MODELS).find(m => m.id === id);
-  return found ? found.name : id;
-};
 
 // --- Robust Fetch Wrapper ---
 const safeFetch = async (url: string, options?: RequestInit) => {
@@ -644,13 +632,8 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
                 {getModeIcon(appMode)}
               </div>
               <span className={`text-xs font-medium ${colors.text} text-nowrap uppercase tracking-tighter`}>
-                {getModeName(appMode)}
+                DARKPIXELS
               </span>
-              {message.modelUsed && message.modelUsed !== MODELS.image.id && (
-                <span className="text-[10px] text-gray-600 ml-2 opacity-50 text-nowrap">
-                  {getModelNameById(message.modelUsed)}
-                </span>
-              )}
             </div>
           )}
           <div className="leading-relaxed text-sm md:text-base">
@@ -1155,8 +1138,8 @@ const DarkPixelsInner = () => {
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-lg ${activeColors.bg} ${activeColors.shadow}`}>
                 <Terminal size={16} className="text-black" />
               </div>
-              <h1 className={`font-bold tracking-tight ${activeColors.text} hidden sm:block`}>
-                {getModeName(appMode)}
+              <h1 className={`font-bold tracking-tight ${activeColors.text} hidden sm:block uppercase`}>
+                DARKPIXELS
               </h1>
             </div>
 
