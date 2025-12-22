@@ -4,30 +4,23 @@ import {
   FileText, X, Cpu,
   Download, Trash2, Terminal,
   Zap, Code, Wind, MessageCircle, BrainCircuit,
-  Plus, Sidebar as SidebarIcon, User as UserIcon, LogOut,
+  Plus, Sidebar as SidebarIcon, User as UserIcon, LogOut, LogIn,
   LayoutTemplate, Sparkles,
   Eye, FileCode, Layout, MessageSquareText, History,
-  Palette, Loader2, AlertCircle, RefreshCw, Smile
+  Palette, Loader2, AlertCircle, RefreshCw, Copy, UserCheck, Square, Smile
 } from 'lucide-react';
-// @ts-ignore
-import ReactMarkdown from 'react-markdown';
-// @ts-ignore
-import remarkGfm from 'remark-gfm';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
 /**
  * DARKPIXELS - Advanced AI Interface
  */
 const getEnv = (key: string, fallback: string) => {
-  // Vite requires static access for replacement during build
   if (key === 'REACT_APP_CUSTOM_API_URL') return import.meta.env.REACT_APP_CUSTOM_API_URL || fallback;
   if (key === 'REACT_APP_CUSTOM_API_KEY') return import.meta.env.REACT_APP_CUSTOM_API_KEY || fallback;
   if (key === 'REACT_APP_TEXT_MODEL_ID') return import.meta.env.REACT_APP_TEXT_MODEL_ID || fallback;
   if (key === 'REACT_APP_FALLBACK_MODEL_ID') return import.meta.env.REACT_APP_FALLBACK_MODEL_ID || fallback;
   if (key === 'REACT_APP_IMAGE_MODEL_ID') return import.meta.env.REACT_APP_IMAGE_MODEL_ID || fallback;
   if (key === 'VITE_GOOGLE_CLIENT_ID') return import.meta.env.VITE_GOOGLE_CLIENT_ID || fallback;
-
-  // @ts-ignore
   return import.meta.env[key] || fallback;
 };
 
@@ -42,22 +35,25 @@ const generateId = () => {
 // 🔧 UNIVERSAL CONFIGURATION (ENV SUPPORTED)
 // ==================================================================================
 
-// 1. API URL for AI Completions
-const AI_COMPLETIONS_URL = getEnv("REACT_APP_CUSTOM_API_URL", "");
+// 1. API URL (OpenRouter)
+const API_URL = getEnv("REACT_APP_CUSTOM_API_URL", "https://openrouter.ai/api/v1/chat/completions");
 
-// 2. API KEY for AI Completions
-const AI_COMPLETIONS_KEY = getEnv("REACT_APP_CUSTOM_API_KEY", "");
+// 2. API KEY (OpenRouter Key)
+const API_KEY = getEnv("REACT_APP_CUSTOM_API_KEY", "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");
 
-// 3. TEXT MODEL ID
-const TEXT_MODEL_ID = getEnv("REACT_APP_TEXT_MODEL_ID", "");
+// 3. PRIMARY MODEL
+const PRIMARY_MODEL = getEnv("REACT_APP_TEXT_MODEL_ID", "mistralai/mistral-7b-instruct:free");
 
-// 4. IMAGE MODEL ID
-const IMAGE_MODEL_ID = getEnv("REACT_APP_IMAGE_MODEL_ID", "");
+// 4. FALLBACK MODELS (Tried in order if primary fails)
+const FALLBACK_MODELS = (getEnv("REACT_APP_FALLBACK_MODEL_ID", "") || "")
+  .split(',')
+  .map(m => m.trim())
+  .filter(Boolean);
 
-// 5. FALLBACK MODEL ID (Used if primary fails)
-const FALLBACK_MODEL_ID = getEnv("REACT_APP_FALLBACK_MODEL_ID", "");
+// 5. IMAGE MODEL (Pollinations)
+const IMAGE_MODEL_ID = getEnv("REACT_APP_IMAGE_MODEL_ID", "pollinations");
 
-// 5. BACKEND API BASE URL
+// 6. BACKEND API BASE URL
 const API_BASE_URL = '/api';
 
 const GOOGLE_CLIENT_ID = getEnv("VITE_GOOGLE_CLIENT_ID", "");
@@ -67,11 +63,11 @@ const GOOGLE_CLIENT_ID = getEnv("VITE_GOOGLE_CLIENT_ID", "");
 
 // --- Dynamic Model Configuration ---
 const MODELS = {
-  general: { name: "DarkPixels AI", id: TEXT_MODEL_ID, icon: <MessageCircle size={14} /> },
-  code: { name: "DarkPixels AI", id: TEXT_MODEL_ID, icon: <Code size={14} /> },
-  deep: { name: "DarkPixels AI", id: TEXT_MODEL_ID, icon: <BrainCircuit size={14} /> },
-  fast: { name: "DarkPixels AI", id: TEXT_MODEL_ID, icon: <Wind size={14} /> },
-  vision: { name: "DarkPixels AI", id: TEXT_MODEL_ID, icon: <Eye size={14} /> },
+  general: { name: "DarkPixels AI", id: PRIMARY_MODEL, icon: <MessageCircle size={14} /> },
+  code: { name: "DarkPixels AI", id: PRIMARY_MODEL, icon: <Code size={14} /> },
+  deep: { name: "DarkPixels AI", id: PRIMARY_MODEL, icon: <BrainCircuit size={14} /> },
+  fast: { name: "DarkPixels AI", id: PRIMARY_MODEL, icon: <Wind size={14} /> },
+  vision: { name: "DarkPixels AI", id: PRIMARY_MODEL, icon: <Eye size={14} /> },
   image: { name: "DarkPixels AI", id: IMAGE_MODEL_ID, icon: <Palette size={14} /> }
 };
 
@@ -128,7 +124,7 @@ interface AppSettings {
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
-  baseUrl: AI_COMPLETIONS_URL,
+  baseUrl: API_URL,
   model: MODELS.general.id,
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   temperature: 0.7,
@@ -141,13 +137,13 @@ const detectIntent = (text: string, appMode: AppMode, _hasImage: boolean): strin
 
   // 1. Image Generation Check
   if (appMode === 'image' ||
-    /(create|gen|make|draw|render|vis|paint|sketch).*(img|image|pic|photo|art|illust)/.test(t) ||
+    /(create|gen|make|draw|render|vis|paint|sketch).*(img|image|pic|photo|paint|art|draw|illust|sketch)/.test(t) ||
     /(draw|gen|create).*(bird|dog|cat|landscape|city|logo)/.test(t)) {
     return MODELS.image.id;
   }
 
-  // 2. Everything else uses the single configured Text Model
-  return TEXT_MODEL_ID;
+  // 2. Everything else uses the configured Primary Model
+  return PRIMARY_MODEL;
 };
 
 const extractCodeBlock = (content: string): string | null => {
@@ -157,24 +153,18 @@ const extractCodeBlock = (content: string): string | null => {
   return match ? match[1] : null;
 };
 
-// Helper to convert chat history array to a single prompt string for the custom API
-/* Unused in current implementation
-const buildPromptFromHistory = (systemPrompt: string, messages: Message[], currentInput: string): string => {
-  let prompt = `System: ${systemPrompt}\n\n`;
-  const recentMessages = messages.slice(-6);
-  recentMessages.forEach(msg => {
-    const role = msg.role === 'user' ? 'User' : 'Assistant';
-    let content = msg.content;
-    if (Array.isArray(content)) {
-        const textPart = content.find((c: any) => c.type === 'text');
-        content = textPart ? textPart.text : "[Image upload]";
-    }
-    prompt += `${role}: ${content}\n`;
-  });
-  prompt += `User: ${currentInput}\nAssistant:`;
-  return prompt;
+// Helper to clean raw tokens from AI response
+const cleanAIResponse = (text: string) => {
+  if (!text) return "";
+  return text
+    .replace(/<s>/g, '')
+    .replace(/<\/s>/g, '')
+    .replace(/\[INST\]/g, '')
+    .replace(/\[\/INST\]/g, '')
+    .replace(/<\|start_header_id\|>.*?<\|end_header_id\|>/g, '')
+    .replace(/<\|eot_id\|>/g, '')
+    .trim();
 };
-*/
 
 // Unified Yellow/Black Theme
 const getModeColors = (_mode: AppMode) => {
@@ -188,6 +178,13 @@ const getModeColors = (_mode: AppMode) => {
   };
 };
 
+const getModeName = (mode: AppMode) => {
+  switch (mode) {
+    case 'canvas': return 'DarkPixels Dev';
+    case 'image': return 'DarkPixels Imagine';
+    default: return 'DarkPixels';
+  }
+};
 
 const getModeIcon = (mode: AppMode) => {
   switch (mode) {
@@ -197,10 +194,8 @@ const getModeIcon = (mode: AppMode) => {
   }
 };
 
-// --- Local Storage Helpers ---
 const GUEST_THREADS_KEY = 'dp_guest_threads';
 const getGuestMessagesKey = (id: string) => `dp_guest_msgs_${id}`;
-
 
 // --- Robust Fetch Wrapper ---
 const safeFetch = async (url: string, options?: RequestInit) => {
@@ -223,7 +218,6 @@ const CanvasPanel = ({ code, onClose }: { code: string, onClose: () => void }) =
 
   return (
     <div className="fixed inset-0 z-50 md:static md:inset-auto md:flex-1 md:flex md:flex-col md:h-full bg-[#0a0a0a] border-l border-gray-800 animate-in slide-in-from-right duration-300 flex flex-col">
-      {/* Canvas Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-[#0a0a0a]">
         <div className="flex items-center gap-3">
           <div className="p-1.5 bg-yellow-500/20 rounded-md">
@@ -272,7 +266,6 @@ const CanvasPanel = ({ code, onClose }: { code: string, onClose: () => void }) =
         </div>
       </div>
 
-      {/* Canvas Content */}
       <div className="flex-1 bg-[#121212] overflow-hidden relative">
         {view === 'preview' ? (
           <iframe
@@ -291,14 +284,14 @@ const CanvasPanel = ({ code, onClose }: { code: string, onClose: () => void }) =
   );
 };
 
-const AuthScreen = ({ onGuest, onGoogleLogin }: { onGuest: () => void, onGoogleLogin: () => void }) => (
+const AuthScreen = ({ onGoogleLogin, onGuest }: { onGoogleLogin: () => void, onGuest: () => void }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505] p-4">
     <div className="w-full max-w-md bg-[#0a0a0a] border border-gray-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center text-center">
       <div className="w-20 h-20 rounded-2xl bg-black border border-gray-800 flex items-center justify-center shadow-lg shadow-yellow-900/10 mb-6 overflow-hidden">
         <img src="/logo.png" alt="DarkPixels Logo" className="w-full h-full object-contain" />
       </div>
       <h1 className="text-3xl font-bold text-white mb-2">DarkPixels AI</h1>
-      <p className="text-gray-500 mb-8 lowercase tracking-[0.2em]">Unrestricted Intelligence Interface</p>
+      <p className="text-gray-500 mb-8">Unrestricted Intelligence Interface</p>
 
       <div className="w-full space-y-4">
         <button
@@ -316,7 +309,7 @@ const AuthScreen = ({ onGuest, onGoogleLogin }: { onGuest: () => void, onGoogleL
 
         <div className="relative flex py-2 items-center">
           <div className="flex-grow border-t border-gray-800"></div>
-          <span className="flex-shrink-0 mx-4 text-gray-600 text-xs text-nowrap">OR</span>
+          <span className="flex-shrink-0 mx-4 text-gray-600 text-xs">OR</span>
           <div className="flex-grow border-t border-gray-800"></div>
         </div>
 
@@ -343,7 +336,7 @@ const Sidebar = ({
   appMode
 }: any) => {
   const sidebarClasses = isOpen
-    ? "w-64 translate-x-0"
+    ? "w-72 translate-x-0 z-[60]"
     : "w-0 -translate-x-full overflow-hidden opacity-0 md:opacity-100 md:w-0";
 
   // Filters
@@ -441,16 +434,12 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
   const isUser = message.role === 'user';
   const colors = getModeColors(appMode);
 
-  // Local state for image loading
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
 
-  // Safety timeout for stuck loading
   useEffect(() => {
     if (!imgLoaded && !imgError && message.role !== 'user') {
-      const timer = setTimeout(() => {
-        setImgLoaded(true);
-      }, 30000);
+      const timer = setTimeout(() => { setImgLoaded(true); }, 30000);
       return () => clearTimeout(timer);
     }
   }, [imgLoaded, imgError, message]);
@@ -495,7 +484,7 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
     if (text.startsWith("Error:") || text.startsWith("⚠️") || text.includes("Payment Required")) {
       return (
         <div className="flex flex-col gap-2">
-          <span className="text-nowrap text-red-400">{text}</span>
+          <span className="text-red-400">{text}</span>
           {onRetry && (
             <button
               onClick={() => onRetry(text)}
@@ -513,14 +502,14 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
       return (
         <div className="my-2 group relative inline-block">
           {!imgLoaded && !imgError && (
-            <div className="flex items-center gap-2 p-4 rounded-xl border border-yellow-500/30 bg-yellow-900/10 text-yellow-500 text-xs font-mono mb-2 animate-pulse text-nowrap">
+            <div className="flex items-center gap-2 p-4 rounded-xl border border-yellow-500/30 bg-yellow-900/10 text-yellow-500 text-xs font-mono mb-2 animate-pulse">
               <Loader2 size={16} className="animate-spin" />
               <span>Wait, the image is loading...</span>
             </div>
           )}
           {imgError && (
             <div className="flex items-center justify-between gap-2 p-4 rounded-xl border border-red-500/30 bg-red-900/10 text-red-400 text-xs font-mono mb-2">
-              <div className="flex items-center gap-2 text-nowrap">
+              <div className="flex items-center gap-2">
                 <AlertCircle size={16} />
                 <span>Failed to load image.</span>
               </div>
@@ -554,180 +543,140 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
             </div>
           )}
 
-          {imgLoaded && !imgError && <p className="text-xs text-gray-500 mt-2">{text.replace(imageMatch[0], '')}</p>}
+          {imgLoaded && !imgError && <p className="text-xs text-gray-500 mt-2">{cleanAIResponse(text.replace(imageMatch[0], ''))}</p>}
         </div>
       );
     }
 
-    return (
-      <div className="markdown-container prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black prose-pre:border prose-pre:border-gray-800">
-        <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
-          code({ node, inline, className, children, ...props }: any) {
-            const match = /language-(\w+)/.exec(className || '');
-            const codeContent = String(children).replace(/\n$/, '');
+    const parts = text.split(/(```[\s\S]*?```)/g);
 
-            if (!inline && match) {
-              if (appMode === 'canvas') {
-                return (
-                  <div className="my-3 p-4 rounded-xl bg-yellow-900/10 border border-yellow-500/30 flex items-center gap-3 not-prose">
-                    <div className="p-2 bg-yellow-500/20 rounded-lg">
-                      <Sparkles size={20} className="text-yellow-500 animate-pulse" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="text-sm font-bold text-white mb-0">App Generated</h4>
-                      <p className="text-xs text-yellow-300 mb-0">Code is ready in the Canvas panel.</p>
-                    </div>
-                    <button
-                      onClick={() => onPreview(codeContent)}
-                      className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-black text-xs font-bold rounded-lg transition-colors text-nowrap"
-                    >
-                      View Canvas
-                    </button>
-                  </div>
-                );
-              }
-              return (
-                <div className="my-3 overflow-hidden rounded-md bg-black border border-gray-800 not-prose">
-                  <div className="flex items-center justify-between px-4 py-2 bg-gray-900/50 border-b border-gray-800">
-                    <span className="text-xs font-mono text-gray-400 capitalize">{match[1]}</span>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(codeContent)}
-                      className="text-xs text-yellow-500 hover:text-yellow-400 font-medium"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                  <pre className="p-4 overflow-x-auto text-sm font-mono text-gray-300 mb-0">
-                    {codeContent}
-                  </pre>
-                </div>
-              );
-            }
-            return <code className={`${className} bg-gray-900 text-yellow-500 px-1.5 py-0.5 rounded text-xs`} {...props}>{children}</code>;
-          },
-          img({ node, ...props }: any) {
-            return <img {...props} className="max-w-full rounded-xl border border-gray-800 shadow-lg my-2" loading="lazy" />;
-          }
-        }}>
-          {text}
-        </ReactMarkdown>
-      </div>
-    );
+    return parts.map((part, index) => {
+      if (part.startsWith('```') && part.endsWith('```')) {
+        const codeContent = part.slice(3, -3).replace(/^[a-z]+\n/, '');
+        if (appMode === 'canvas') {
+          return (
+            <div key={index} className="my-3 p-4 rounded-xl bg-yellow-900/10 border border-yellow-500/30 flex items-center gap-3">
+              <div className="p-2 bg-yellow-500/20 rounded-lg">
+                <Sparkles size={20} className="text-yellow-500 animate-pulse" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-bold text-white">App Generated</h4>
+                <p className="text-xs text-yellow-300">Code is ready in the Canvas panel.</p>
+              </div>
+              <button
+                onClick={() => onPreview(codeContent)}
+                className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-black text-xs font-bold rounded-lg transition-colors"
+              >
+                View Canvas
+              </button>
+            </div>
+          );
+        }
+        return (
+          <div key={index} className="my-3 overflow-hidden rounded-md bg-black border border-gray-800">
+            <div className="flex items-center justify-between px-4 py-2 bg-gray-900/50 border-b border-gray-800">
+              <span className="text-xs font-mono text-gray-400">Code</span>
+              <button
+                onClick={() => navigator.clipboard.writeText(codeContent)}
+                className="text-xs text-yellow-500 hover:text-yellow-400"
+              >
+                Copy
+              </button>
+            </div>
+            <pre className="p-4 overflow-x-auto text-sm font-mono text-gray-300">{codeContent}</pre>
+          </div>
+        );
+      }
+      return (
+        <div key={index} className="whitespace-pre-wrap relative group">
+          {cleanAIResponse(part)}
+          {part.trim().length > 0 && !isUser && (
+            <button
+              onClick={() => navigator.clipboard.writeText(part)}
+              className="absolute -right-1 -top-1 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-yellow-500 transition-all p-1"
+              title="Copy text"
+            ><Copy size={12} /></button>
+          )}
+        </div>
+      );
+    });
   };
 
   return (
-    <div className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex w-full mb-8 ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`flex max-w-[95%] md:max-w-[85%] flex-col ${isUser ? 'items-end' : 'items-start'}`}>
-        <div className={`
-          relative px-5 py-4 rounded-2xl shadow-lg backdrop-blur-sm group
-          ${isUser
-            ? `${colors.bg} text-black rounded-br-none font-medium`
-            : 'bg-gray-800/80 border border-gray-700 text-gray-100 rounded-bl-none'}
-        `}>
+        <div className={`relative px-5 py-4 rounded-2xl shadow-lg backdrop-blur-sm group ${isUser ? 'bg-yellow-500 text-black rounded-br-none font-medium' : 'bg-gray-800/80 border border-gray-700 text-gray-100 rounded-bl-none'}`}>
           {message.role === 'assistant' && (
-            <div className="absolute -top-6 left-0 flex items-center gap-2">
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center border
-                ${colors.badge} ${colors.border}
-              `}>
-                {getModeIcon(appMode)}
+            <div className="absolute -top-7 left-0 flex items-center gap-2 mb-2 pointer-events-none">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center border-2 border-yellow-500/30 bg-black overflow-hidden shadow-sm">
+                <img src="/logo.png" alt="AI" className="w-4 h-4 object-contain" />
               </div>
-              <span className={`text-xs font-medium ${colors.text} text-nowrap uppercase tracking-tighter`}>
-                DARKPIXELS
-              </span>
+              <span className="text-[10px] font-bold text-yellow-500 uppercase tracking-tighter">DARKPIXELS AI</span>
             </div>
           )}
-          <div className="leading-relaxed text-sm md:text-base">
-            {renderContent(message.content)}
-          </div>
+          <div className="leading-relaxed text-sm md:text-base selection:bg-yellow-500/30">{renderContent(message.content)}</div>
         </div>
       </div>
     </div>
   );
 };
 
-const SettingsModal = ({
-  isOpen,
-  onClose,
-  settings,
-  onSave
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  settings: AppSettings;
-  onSave: (s: AppSettings) => void;
-}) => {
-  const [localSettings, setLocalSettings] = useState(settings);
-  useEffect(() => setLocalSettings(settings), [settings, isOpen]);
-
+const SettingsModal = ({ isOpen, onClose, user, onLogin, onClearHistory }: any) => {
   if (!isOpen) return null;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="w-full max-w-lg bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className="p-6 border-b border-gray-800 flex justify-between items-center">
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Cpu className="text-yellow-500" /> Configuration
+            {user ? <UserCheck className="text-yellow-500" /> : <LogIn className="text-yellow-500" />} {user ? 'Account' : 'Sign In'}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white"><X size={24} /></button>
         </div>
-
         <div className="p-6 overflow-y-auto space-y-6">
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Parameters</h3>
-
-            <div className="flex items-center justify-between bg-gray-950 p-3 rounded-lg border border-gray-800">
-              <span className="text-sm text-gray-300">Auto-Select Model?</span>
-              <button
-                onClick={() => setLocalSettings(s => ({ ...s, autoRoute: !s.autoRoute }))}
-                className={`w-12 h-6 rounded-full p-1 transition-colors relative ${localSettings.autoRoute ? 'bg-yellow-500' : 'bg-gray-700'}`}
-              >
-                <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${localSettings.autoRoute ? 'translate-x-6' : 'translate-x-0'} `} />
-              </button>
+          {!user ? (
+            <div className="text-center py-8 space-y-6">
+              <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4"><UserIcon size={32} className="text-gray-400" /></div>
+              <p className="text-gray-300">Sign in to save your chats and access advanced features.</p>
+              <button onClick={() => { onLogin(); onClose(); }} className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center gap-2">Sign in with Google</button>
             </div>
-          </div>
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Persona</h3>
-            <textarea
-              value={localSettings.systemPrompt}
-              onChange={(e) => setLocalSettings({ ...localSettings, systemPrompt: e.target.value })}
-              rows={4}
-              className="w-full bg-gray-950 border border-gray-800 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-yellow-500 outline-none resize-none text-sm"
-            />
-          </div>
-        </div>
-
-        <div className="p-6 border-t border-gray-800 bg-gray-900">
-          <button
-            onClick={() => { onSave(localSettings); onClose(); }}
-            className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-lg shadow-lg shadow-yellow-900/20"
-          >
-            Save Configuration
-          </button>
+          ) : (
+            <div className="space-y-6">
+              <div className="bg-gray-800/50 p-4 rounded-xl border border-gray-700 flex items-center gap-4">
+                <div className="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center text-black font-bold text-xl">
+                  {user.email ? user.email[0].toUpperCase() : 'G'}
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-white font-medium truncate">{user.displayName || 'Guest User'}</p>
+                  <p className="text-xs text-gray-400 truncate">{user.email || `ID: ${user.uid.slice(0, 12)}...`}</p>
+                </div>
+              </div>
+              <div className="pt-4 border-t border-gray-800">
+                <button
+                  onClick={() => {
+                    if (confirm('Are you sure you want to delete all chat history? This cannot be undone.')) {
+                      onClearHistory();
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 py-3 rounded-lg transition-colors font-medium"
+                >
+                  <Trash2 size={16} /> Delete All History
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-// --- Main App Logic ---
-
-const EmojiPicker = ({ onSelect }: { onSelect: (emoji: string) => void }) => {
-  const emojis = ['😊', '😂', '🔥', '✨', '💻', '🚀', '🤖', '🎨', '👍', '❤️', '🤔', '🎉', '💡', '✅', '⚡', '🌈', '🫂', '⭐', '🔥', '🎯', '👋', '🙌', '🔍', '📱'];
-  return (
-    <div className="absolute bottom-full mb-2 left-0 bg-gray-900/95 backdrop-blur-xl border border-gray-800 rounded-2xl p-3 shadow-2xl grid grid-cols-6 gap-2 z-50 animate-in fade-in slide-in-from-bottom-2">
-      {emojis.map((e, i) => (
-        <button key={i} onClick={() => onSelect(e)} className="text-xl hover:bg-gray-800 hover:scale-110 p-2 rounded-xl transition-all duration-200">{e}</button>
-      ))}
-    </div>
-  );
-};
+// --- Main App ---
 
 const DarkPixelsInner = () => {
   const [authState, setAuthState] = useState<'loading' | 'auth' | 'guest' | 'user'>('loading');
   const [user, setUser] = useState<User | null>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
-  const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -740,426 +689,280 @@ const DarkPixelsInner = () => {
   const [pendingFile, setPendingFile] = useState<{ name: string, content: string, type: 'image' | 'text' } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // 1. Init Auth (Check Session)
   useEffect(() => {
-    const savedUser = localStorage.getItem('dp_user');
-    if (savedUser) {
-      try {
-        const u = JSON.parse(savedUser);
-        setUser(u);
-        setAuthState('user');
-      } catch (e) {
-        setAuthState('auth');
-      }
-    } else {
-      setAuthState('auth');
+    const saved = localStorage.getItem('dp_user');
+    if (saved) {
+      const u = JSON.parse(saved);
+      setUser(u);
+      setAuthState(u.uid.startsWith('guest_') ? 'guest' : 'user');
     }
+    else { setAuthState('auth'); }
   }, []);
 
-  // 2. Load Threads
   const fetchThreads = async () => {
     if (authState === 'user' && user) {
       try {
         const data = await safeFetch(`${API_BASE_URL}/threads?userId=${user.uid}`);
-        if (data) {
-          const loaded = data.map((d: any) => ({ ...d, id: d.id.toString() } as Thread));
-          loaded.sort((a: any, b: any) => b.createdAt - a.createdAt);
-          setThreads(loaded);
-        }
-      } catch (e) { console.error("Thread fetch error", e); }
+        if (data) setThreads(data.map((d: any) => ({ ...d, id: d.id.toString() })));
+      } catch (e) { console.error(e); }
     } else if (authState === 'guest') {
-      const localThreads = JSON.parse(localStorage.getItem(GUEST_THREADS_KEY) || '[]');
-      localThreads.sort((a: Thread, b: Thread) => b.createdAt - a.createdAt);
-      setThreads(localThreads);
+      setThreads(JSON.parse(localStorage.getItem(GUEST_THREADS_KEY) || '[]'));
     }
   };
 
   useEffect(() => { fetchThreads(); }, [authState, user]);
 
-  // 3. Load Messages
   const fetchMessages = async () => {
-    if (!currentThreadId) {
-      setMessages([]);
-      return;
-    }
-
+    if (!currentThreadId) { setMessages([]); return; }
     if (authState === 'user' && user) {
       try {
         const data = await safeFetch(`${API_BASE_URL}/threads/${currentThreadId}/messages`);
-        if (data) {
-          const loaded = data.map((d: any) => ({ ...d, id: d.id.toString() } as Message));
-          loaded.sort((a: any, b: any) => a.timestamp - b.timestamp);
-          setMessages(loaded);
-        }
-      } catch (e) { console.error("Message fetch error", e); }
+        if (data) setMessages(data.map((d: any) => ({ ...d, id: d.id.toString() })));
+      } catch (e) { console.error(e); }
     } else if (authState === 'guest') {
-      const msgs = JSON.parse(localStorage.getItem(getGuestMessagesKey(currentThreadId)) || '[]');
-      msgs.sort((a: Message, b: Message) => a.timestamp - b.timestamp);
-      setMessages(msgs);
+      setMessages(JSON.parse(localStorage.getItem(getGuestMessagesKey(currentThreadId)) || '[]'));
     }
   };
 
   useEffect(() => { fetchMessages(); }, [currentThreadId, authState]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (appMode === 'canvas' && messages.length > 0) {
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const msg = messages[i];
+        if (msg.role === 'assistant') {
+          const content = Array.isArray(msg.content) ? msg.content.find(c => c.type === 'text')?.text || "" : msg.content;
+          const code = extractCodeBlock(content);
+          if (code) {
+            setPreviewCode(code);
+            break;
+          }
+        }
+      }
+    }
+  }, [messages, appMode]);
+
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
-      try {
-        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        });
-        const info = await res.json();
-        const u = { uid: info.sub, email: info.email, displayName: info.name, photoURL: info.picture };
-        setUser(u);
-        setAuthState('user');
-        localStorage.setItem('dp_user', JSON.stringify(u));
-
-        // Sync with DB
-        await safeFetch(`${API_BASE_URL}/users`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(u)
-        });
-      } catch (e) {
-        console.error("Login failed", e);
-        alert("Google Sign-In failed.");
-      }
+      const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } });
+      const info = await res.json();
+      const u = { uid: info.sub, email: info.email, displayName: info.name, photoURL: info.picture };
+      setUser(u); setAuthState('user'); localStorage.setItem('dp_user', JSON.stringify(u));
+      await safeFetch(`${API_BASE_URL}/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(u) });
     }
   });
 
   const handleGuest = () => {
     setAuthState('guest');
-    const localThreads = JSON.parse(localStorage.getItem(GUEST_THREADS_KEY) || '[]');
-    setThreads(localThreads);
-
-    if (localThreads.length === 0) {
-      createNewChat('chat');
-    }
+    const guestId = 'guest_' + Math.random().toString(36).substr(2, 9);
+    const u = { uid: guestId, email: '', displayName: 'Guest User' };
+    setUser(u);
+    localStorage.setItem('dp_user', JSON.stringify(u));
+    const local = JSON.parse(localStorage.getItem(GUEST_THREADS_KEY) || '[]');
+    setThreads(local);
+    setCurrentThreadId(null);
+    setMessages([]);
   };
 
-  const handleThreadSelect = (threadId: string) => {
-    const selectedThread = threads.find(t => t.id === threadId);
-    if (selectedThread) {
-      const targetMode = selectedThread.type === 'dev' ? 'canvas' : (selectedThread.type === 'image' ? 'image' : 'chat');
-      setAppMode(targetMode);
-      setCurrentThreadId(threadId);
-      setPreviewCode(null);
-    }
-    if (window.innerWidth < 768) setIsSidebarOpen(false);
-  };
-
-  const switchMode = (targetMode: AppMode) => {
-    if (appMode === targetMode) return;
-    setPreviewCode(null);
-    setPendingFile(null);
-    setInput('');
-    createNewChat(targetMode);
-  };
-
-  const createNewChat = async (targetMode: AppMode) => {
+  const createNewChat = async (targetMode: AppMode): Promise<string | undefined> => {
     setAppMode(targetMode);
-    const type = targetMode === 'canvas' ? 'dev' : (targetMode === 'image' ? 'image' : 'chat');
-    const title = targetMode === 'canvas' ? 'New Project' : (targetMode === 'image' ? 'New Image' : 'New Chat');
-
-    if (authState === 'user' && user) {
-      try {
-        const newThread = await safeFetch(`${API_BASE_URL}/threads`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.uid, title, type })
-        });
-        if (newThread) {
-          setCurrentThreadId(newThread.id.toString());
-          setThreads(prev => [newThread, ...prev]);
-        }
-      } catch (e) { console.error("Thread creation error", e); }
-    } else {
-      const newId = generateId();
-      const newThread: Thread = { id: newId, title, createdAt: Date.now(), type: type as any };
-      const updatedThreads = [newThread, ...threads];
-      setThreads(updatedThreads);
-      localStorage.setItem(GUEST_THREADS_KEY, JSON.stringify(updatedThreads));
-      setCurrentThreadId(newId);
-      setMessages([]);
-    }
+    setCurrentThreadId(null);
+    setMessages([]);
     setPreviewCode(null);
+    return undefined;
   };
 
-  const deleteThread = async (threadId: string) => {
-    if (authState === 'user' && user) {
-      await safeFetch(`${API_BASE_URL}/threads/${threadId}`, { method: 'DELETE' });
-      if (currentThreadId === threadId) {
-        setCurrentThreadId(null);
-        setMessages([]);
-        setPreviewCode(null);
-      }
-      fetchThreads();
+  const switchMode = (mode: AppMode) => {
+    if (appMode === mode) return;
+    const hasMessages = messages.length > 0;
+
+    if (hasMessages) {
+      setPreviewCode(null);
+      setPendingFile(null);
+      setInput('');
+      createNewChat(mode);
     } else {
-      const updatedThreads = threads.filter(t => t.id !== threadId);
-      setThreads(updatedThreads);
-      localStorage.setItem(GUEST_THREADS_KEY, JSON.stringify(updatedThreads));
-      localStorage.removeItem(getGuestMessagesKey(threadId));
-      if (currentThreadId === threadId) {
-        setCurrentThreadId(null);
-        setMessages([]);
-        setPreviewCode(null);
-      }
+      setAppMode(mode);
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    if (file.type.startsWith('image/')) {
-      reader.onload = (event) => setPendingFile({ name: file.name, content: event.target?.result as string, type: 'image' });
-      reader.readAsDataURL(file);
-    } else {
-      reader.onload = (event) => setPendingFile({ name: file.name, content: event.target?.result as string, type: 'text' });
-      reader.readAsText(file);
-    }
-    e.target.value = '';
-  };
-
-  const handleSend = async (overrideText?: string) => {
-    const textToUse = overrideText || input;
-    if ((!textToUse.trim() && !pendingFile) || isLoading) return;
-
-    const text = textToUse;
+  const handleSend = async (override?: string) => {
+    const text = override || input;
+    if ((!text.trim() && !pendingFile) || isLoading) return;
     const currentFile = pendingFile;
+    setInput(''); setPendingFile(null); setIsLoading(true); setLoadingText("Thinking...");
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
 
-    setInput('');
-    setPendingFile(null);
-    setIsLoading(true);
-    setLoadingText("Thinking...");
+    let model = settings.model;
+    if (appMode === 'canvas') { model = MODELS.code.id; setLoadingText("Building App..."); }
+    else if (appMode === 'image') { model = MODELS.image.id; setLoadingText("Generating Image..."); }
+    else if (settings.autoRoute) { model = detectIntent(text, appMode, !!currentFile); }
 
-    let selectedModel = settings.model;
-    const hasImage = currentFile?.type === 'image';
+    let activeId = currentThreadId;
+    if (!activeId) {
+      // Lazy create thread
+      const type = appMode === 'canvas' ? 'dev' : (appMode === 'image' ? 'image' : 'chat');
+      const title = text.slice(0, 30) || 'New Chat';
 
-    if (appMode === 'canvas') { selectedModel = MODELS.code.id; setLoadingText("Building App..."); }
-    else if (appMode === 'image') { selectedModel = MODELS.image.id; setLoadingText("Generating Image..."); }
-    else if (settings.autoRoute) { selectedModel = detectIntent(text, appMode, hasImage); }
-
-    let activeThreadId = currentThreadId;
-
-    if (!activeThreadId) {
-      await createNewChat(appMode);
-      // Note: createNewChat sets currentThreadId, but we might need to wait or use the local ID
-      activeThreadId = generateId(); // Temporary fallback if async creation is too slow for logic
-    }
-
-    // Unified UI Message
-    let uiContent: any = text;
-    if (currentFile) {
-      if (currentFile.type === 'text') {
-        uiContent = (text ? text + '\n\n' : '') + `--- BEGIN FILE: ${currentFile.name} ---\n${currentFile.content}\n--- END FILE ---`;
+      if (authState === 'user' && user) {
+        const newT = await safeFetch(`${API_BASE_URL}/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: user.uid, title, type }) });
+        if (newT) {
+          activeId = newT.id.toString();
+          setCurrentThreadId(activeId);
+          setThreads(prev => [newT, ...prev]);
+        }
       } else {
-        uiContent = (text ? text + '\n\n' : '') + `[User uploaded image: ${currentFile.name}]`;
+        activeId = generateId();
+        const newT = { id: activeId, title, createdAt: Date.now(), type: type as any };
+        const updated = [newT, ...threads];
+        setThreads(updated);
+        localStorage.setItem(GUEST_THREADS_KEY, JSON.stringify(updated));
+        setCurrentThreadId(activeId);
       }
     }
 
-    const userMsg: Message = { id: generateId(), role: 'user', content: uiContent, timestamp: Date.now() };
+    let ui = text;
+    if (currentFile) ui = (text ? text + '\n\n' : '') + (currentFile.type === 'text' ? `--- FILE: ${currentFile.name} ---\n${currentFile.content}\n--- END ---` : `[Image: ${currentFile.name}]`);
+
+    const userMsg: Message = { id: generateId(), role: 'user', content: ui, timestamp: Date.now() };
     setMessages(prev => [...prev, userMsg]);
 
+    const isNewConversation = !currentThreadId || messages.length === 0;
+
     const saveMsg = async (msg: Message, tid: string) => {
-      if (authState === 'user' && user) {
-        await safeFetch(`${API_BASE_URL}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ threadId: tid, role: msg.role, content: msg.content, modelUsed: msg.modelUsed })
-        });
-      } else {
-        const local = JSON.parse(localStorage.getItem(getGuestMessagesKey(tid)) || '[]');
-        localStorage.setItem(getGuestMessagesKey(tid), JSON.stringify([...local, msg]));
-      }
+      if (authState === 'user' && user) await safeFetch(`${API_BASE_URL}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ threadId: tid, role: msg.role, content: msg.content, modelUsed: msg.modelUsed }) });
+      else { const local = JSON.parse(localStorage.getItem(getGuestMessagesKey(tid)) || '[]'); localStorage.setItem(getGuestMessagesKey(tid), JSON.stringify([...local, msg])); }
     };
 
-    if (currentThreadId) saveMsg(userMsg, currentThreadId);
-
-    // Auto-update thread title after first message
-    if (messages.length <= 1 && currentThreadId) {
-      const titleText = text || (currentFile ? `File: ${currentFile.name}` : 'New Chat');
-      const newTitle = titleText.slice(0, 30) + (titleText.length > 30 ? '...' : '');
-      const type = appMode === 'canvas' ? 'dev' : (appMode === 'image' ? 'image' : 'chat');
-
-      if (authState === 'user' && user) {
-        safeFetch(`${API_BASE_URL}/threads/${currentThreadId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: newTitle })
-        }).catch(e => console.error("Title Update Error", e));
-      } else {
-        const updatedThreads = threads.map(t =>
-          t.id === currentThreadId ? { ...t, title: newTitle, type: type as any } : t
-        );
-        setThreads(updatedThreads);
-        localStorage.setItem(GUEST_THREADS_KEY, JSON.stringify(updatedThreads));
-      }
-    }
+    if (activeId) saveMsg(userMsg, activeId);
 
     try {
-      const activeSystemPrompt = appMode === 'canvas' ? DEV_MODE_SYSTEM_PROMPT : settings.systemPrompt;
-
-      if (selectedModel === MODELS.image.id) {
-        const seed = Math.floor(Math.random() * 1000000);
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(text)}?nologo=true&seed=${seed}`;
-        const aiText = `Here is your image based on "${text}":\n\n![Generated Image](${imageUrl})`;
-        const aiMsg: Message = { id: generateId(), role: 'assistant', content: aiText, timestamp: Date.now(), modelUsed: selectedModel };
-        setMessages(prev => [...prev, aiMsg]);
-        if (currentThreadId) saveMsg(aiMsg, currentThreadId);
-        setIsLoading(false);
-        return;
+      if (model === MODELS.image.id) {
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(text)}?nologo=true&seed=${Math.floor(Math.random() * 1000000)}`;
+        const aiMsg: Message = { id: generateId(), role: 'assistant', content: `![Generated Image](${imageUrl})`, timestamp: Date.now(), modelUsed: model };
+        setMessages(prev => [...prev, aiMsg]); if (activeId) saveMsg(aiMsg, activeId); setIsLoading(false); return;
       }
 
-      // API Payload logic
-      let apiContent: any = text;
-      if (currentFile?.type === 'image') {
-        apiContent = [
-          { type: "text", text: text || "Analyze this image." },
-          { type: "image_url", image_url: { url: currentFile.content } }
-        ];
-      } else if (currentFile?.type === 'text') {
-        apiContent = (text ? text + '\n\n' : '') + `--- BEGIN FILE: ${currentFile.name} ---\n${currentFile.content}\n--- END FILE ---`;
-      }
+      const history = messages.slice(-10); // Get more context
 
-      const performApiCall = async (modelToUse: string) => {
-        const response = await fetch(AI_COMPLETIONS_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${AI_COMPLETIONS_KEY}`,
-            'HTTP-Referer': 'https://darkpixels.app',
-            'X-Title': 'DarkPixels'
-          },
-          body: JSON.stringify({
-            model: modelToUse,
-            messages: [
-              { role: 'system', content: activeSystemPrompt },
-              ...messages.slice(-6).map(m => ({
-                role: m.role,
-                content: typeof m.content === 'object' ? JSON.stringify(m.content) : m.content
-              })),
-              { role: 'user', content: apiContent }
-            ],
-            temperature: appMode === 'canvas' ? 0.2 : settings.temperature
-          })
+      const performCall = async (mId: string) => {
+        const res = await fetch(API_URL, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}`, 'HTTP-Referer': 'https://darkpixels.app', 'X-Title': 'DarkPixels' },
+          body: JSON.stringify({ model: mId, messages: [{ role: 'system', content: appMode === 'canvas' ? DEV_MODE_SYSTEM_PROMPT : settings.systemPrompt }, ...history.map(m => ({ role: m.role, content: m.content })), { role: 'user', content: text }], temperature: appMode === 'canvas' ? 0.2 : settings.temperature }),
+          signal: abortControllerRef.current?.signal
         });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(errorText || `API Error: ${response.status}`);
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw { status: res.status, message: errData.error?.message || res.statusText };
         }
-
-        return response.json();
+        return res.json();
       };
 
       let data;
-      try {
-        data = await performApiCall(selectedModel);
-      } catch (err: any) {
-        // Multi-Model Fallback Logic
-        const isRateLimit = err.message.includes('429') || err.message.includes('rate_limit') || err.message.includes('402');
-        if (isRateLimit && selectedModel === TEXT_MODEL_ID) {
-          const fallbacks = FALLBACK_MODEL_ID.split(',').map((f: string) => f.trim()).filter(Boolean);
-          let fallbackSuccess = false;
-
-          for (const fallbackModel of fallbacks) {
-            try {
-              setLoadingText(`DarkPixels AI is busy, trying alternate system...`);
-              data = await performApiCall(fallbackModel);
-              selectedModel = fallbackModel;
-              fallbackSuccess = true;
-              break;
-            } catch (fallbackErr) {
-              console.error(`Fallback failed for ${fallbackModel}:`, fallbackErr);
-            }
+      try { data = await performCall(model); }
+      catch (e: any) {
+        if (e.name === 'AbortError') return;
+        let success = false;
+        if (FALLBACK_MODELS.length > 0) {
+          for (const fb of FALLBACK_MODELS) {
+            try { setLoadingText("DarkPixels is busy, retrying..."); data = await performCall(fb); model = fb; success = true; break; } catch { continue; }
           }
-
-          if (!fallbackSuccess) throw err;
-        } else {
-          throw err;
         }
+        if (!success) throw e;
       }
 
-      let aiText = data.choices?.[0]?.message?.content || "";
-      // Clean up common BOS/EOS tokens that leak from some models (e.g. <s>, </s>)
-      aiText = aiText.replace(/<\/?s>/gi, '').trim();
+      let aiText = cleanAIResponse(data.choices?.[0]?.message?.content || "");
+      if (!aiText) aiText = "The system is currently unresponsive. Please try again shortly.";
 
-      if (!aiText) {
-        aiText = "I'm sorry, I was unable to generate a coherent response. 🤖 This can happen if the model is busy or the input was unclear. Please try switching models or rephrasing.";
-      }
-
-      if (appMode === 'canvas') {
-        const extracted = extractCodeBlock(aiText);
-        if (extracted) setPreviewCode(extracted);
-      }
-
-      const aiMsg: Message = { id: generateId(), role: 'assistant', content: aiText, timestamp: Date.now(), modelUsed: selectedModel };
-      setMessages(prev => [...prev, aiMsg]);
-      if (currentThreadId) saveMsg(aiMsg, currentThreadId);
-
+      if (appMode === 'canvas') { const code = extractCodeBlock(aiText); if (code) setPreviewCode(code); }
+      const aiMsg: Message = { id: generateId(), role: 'assistant', content: aiText, timestamp: Date.now(), modelUsed: model };
+      setMessages(prev => [...prev, aiMsg]); if (activeId) saveMsg(aiMsg, activeId);
     } catch (err: any) {
-      let errorText = `Error: ${err.message}`;
-      if (err.message.includes('429')) {
-        errorText = "⚠️ **Rate Limit Reached:** You're sending messages too fast for this free model. Please wait a minute or switch to a different model in Settings.";
-      } else if (err.message.includes('402')) {
-        errorText = "⚠️ **Insufficient Credits:** This model require a balance on OpenRouter. Please switch to a ':free' model or top up your account.";
+      if (err.name === 'AbortError') return;
+      let displayMsg = `Error: ${err.message || "An unexpected error occurred"}`;
+
+      // Error Message Logic
+      if (err.status === 429) {
+        if (isNewConversation || authState === 'guest') {
+          displayMsg = "OUR DARKPIXELS AI IS BUSY NOW TRY AFTER SOMETIME";
+        } else {
+          displayMsg = "your limit is reached try after some time";
+        }
+      } else if (authState === 'guest' || isNewConversation) {
+        displayMsg = "OUR DARKPIXELS AI IS BUSY NOW TRY AFTER SOMETIME";
       }
 
-      const errorMsg: Message = { id: generateId(), role: 'assistant', content: errorText, timestamp: Date.now() };
-      setMessages(prev => [...prev, errorMsg]);
-    } finally {
-      setIsLoading(false);
+      const errorMsg: Message = { id: generateId(), role: 'assistant', content: displayMsg, timestamp: Date.now() };
+      setMessages(prev => [...prev, errorMsg]); if (activeId) saveMsg(errorMsg, activeId);
+    } finally { setIsLoading(false); }
+  };
+
+  const handleFileSelect = (e: any) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const r = new FileReader();
+    if (file.type.startsWith('image/')) { r.onload = (ev) => setPendingFile({ name: file.name, content: ev.target?.result as string, type: 'image' }); r.readAsDataURL(file); }
+    else { r.onload = (ev) => setPendingFile({ name: file.name, content: ev.target?.result as string, type: 'text' }); r.readAsText(file); }
+    e.target.value = '';
+  };
+
+  const handleClearHistory = async () => {
+    if (authState === 'user' && user) {
+      for (const t of threads) {
+        await fetch(`${API_BASE_URL}/threads/${t.id}`, { method: 'DELETE' });
+      }
+      localStorage.removeItem('dp_user');
+      window.location.reload();
+    } else {
+      localStorage.clear();
+      window.location.reload();
     }
   };
 
-  const activeColors = getModeColors(appMode);
+  const handleStop = () => { if (abortControllerRef.current) { abortControllerRef.current.abort(); abortControllerRef.current = null; } setIsLoading(false); };
 
   if (authState === 'loading') return <div className="h-screen bg-black flex items-center justify-center text-gray-500 font-mono tracking-widest animate-pulse uppercase">Link Start...</div>;
   if (authState === 'auth') return <AuthScreen onGoogleLogin={() => handleGoogleLogin()} onGuest={handleGuest} />;
 
   return (
     <div className="flex h-screen bg-[#050505] text-gray-100 font-sans overflow-hidden">
-      <Sidebar isOpen={isSidebarOpen} threads={threads} activeThreadId={currentThreadId} onSelectThread={handleThreadSelect} onNewChat={() => switchMode(appMode)} onDeleteThread={deleteThread} onCloseMobile={() => setIsSidebarOpen(false)} appMode={appMode} />
+      <Sidebar isOpen={isSidebarOpen} threads={threads} activeThreadId={currentThreadId} onSelectThread={(id: string) => {
+        setCurrentThreadId(id);
+        const thread = threads.find(t => t.id === id);
+        if (thread) {
+          const mode = thread.type === 'dev' ? 'canvas' : (thread.type === 'image' ? 'image' : 'chat');
+          setAppMode(mode);
+        }
+      }} onNewChat={() => createNewChat(appMode)} onDeleteThread={(id: string) => {
+        if (authState === 'user') fetch(`${API_BASE_URL}/threads/${id}`, { method: 'DELETE' }).then(() => fetchThreads());
+        else {
+          const updated = threads.filter(t => t.id !== id);
+          setThreads(updated);
+          localStorage.setItem(GUEST_THREADS_KEY, JSON.stringify(updated));
+          localStorage.removeItem(getGuestMessagesKey(id));
+          if (currentThreadId === id) setCurrentThreadId(null);
+        }
+      }} onCloseMobile={() => setIsSidebarOpen(false)} appMode={appMode} />
       <div className="flex-1 flex overflow-hidden">
-        <div className={`flex-1 flex flex-col h-full relative transition-all duration-300 ${previewCode ? 'border-r border-gray-800' : ''}`}>
-          <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-10 sticky top-0">
-            <div className="flex items-center gap-3">
-              <button
-                className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              >
-                <SidebarIcon size={20} />
-              </button>
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-lg bg-black border border-gray-800 overflow-hidden`}>
-                <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
-              </div>
-              <h1 className={`font-bold tracking-tight ${activeColors.text} hidden sm:block uppercase`}>
-                DARKPIXELS
-              </h1>
+        <div className={`flex-1 flex flex-col h-full relative ${previewCode ? 'border-r border-gray-800' : ''}`}>
+          <header className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-10 sticky top-0">
+            <div className="flex items-center gap-2 md:gap-3">
+              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"><SidebarIcon size={18} /></button>
+              <img src="/logo.png" alt="Logo" className="w-6 h-6 md:w-8 md:h-8 object-contain shrink-0" />
+              <h1 className="font-bold tracking-tight text-yellow-500 text-sm md:text-base uppercase truncate ml-1">DARKPIXELS AI</h1>
             </div>
-
             <div className="bg-gray-900/50 p-1 rounded-xl flex items-center border border-gray-800">
               {['chat', 'canvas', 'image'].map((m) => (
-                <button
-                  key={m}
-                  onClick={() => switchMode(m as AppMode)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold md:text-xs transition-all uppercase tracking-tighter
-                     ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}
-                   `}
-                >
-                  {m}
-                </button>
+                <button key={m} onClick={() => switchMode(m as AppMode)} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}`}>{m}</button>
               ))}
             </div>
-
             <div className="flex items-center gap-2">
-              <button onClick={() => setIsSettingsOpen(true)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 hidden xs:block"><Settings size={20} /></button>
-              <button onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }} className="p-2 hover:bg-gray-800 rounded-lg text-red-500" title="Sign Out"><LogOut size={20} /></button>
+              <button onClick={() => setIsSettingsOpen(true)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"><Settings size={20} /></button>
+              <button onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }} className="p-2 hover:bg-gray-800 rounded-lg text-red-500"><LogOut size={20} /></button>
             </div>
           </header>
 
@@ -1167,16 +970,15 @@ const DarkPixelsInner = () => {
             <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end pb-4">
               {messages.length === 0 && (
                 <div className="flex-1 flex flex-col items-center justify-center text-gray-700 space-y-4 opacity-50 grayscale animate-pulse">
-                  <Terminal size={48} className="text-yellow-500/20" />
+                  <img src="/logo.png" alt="DarkPixels AI" className="w-16 h-16 opacity-20" />
                   <div className="text-center font-mono text-[10px] tracking-[0.4em] uppercase">System Ready / Awaiting Interaction</div>
                 </div>
               )}
-              {messages.map(m => (
-                <MessageBubble key={m.id} message={m} onPreview={(code) => setPreviewCode(code)} appMode={appMode} onRetry={(text) => handleSend(text)} />
-              ))}
+              {messages.map(m => (<MessageBubble key={m.id} message={m} onPreview={setPreviewCode} appMode={appMode} onRetry={handleSend} />))}
               {isLoading && (
-                <div className={`ml-4 text-[10px] animate-pulse text-yellow-500 font-mono uppercase tracking-widest flex items-center gap-2`}>
+                <div className="ml-4 text-[10px] animate-pulse text-yellow-500 font-mono uppercase tracking-widest flex items-center gap-2">
                   <Loader2 size={10} className="animate-spin" /> {loadingText}
+                  <button onClick={handleStop} className="ml-2 p-1 bg-red-500/20 text-red-400 hover:text-red-300 rounded"><Square size={10} fill="currentColor" /></button>
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -1184,39 +986,38 @@ const DarkPixelsInner = () => {
           </main>
 
           <footer className="p-4 border-t border-gray-800 bg-[#050505]">
-            <div className={`max-w-3xl mx-auto relative flex flex-col gap-2 bg-gray-950/50 border rounded-3xl p-2 transition-all group
-               ${activeColors.border} ${activeColors.focus}
-            `}>
+            <div className={`max-w-3xl mx-auto relative flex flex-col gap-2 bg-gray-950/50 border rounded-3xl p-2 transition-all group ${getModeColors(appMode).border}`}>
               {pendingFile && (
                 <div className="flex items-center gap-3 p-2 bg-black/60 rounded-xl w-fit border border-gray-700 ml-2 mt-1">
-                  {pendingFile.type === 'image' ? <img src={pendingFile.content} className="h-12 w-12 object-cover rounded-lg border border-gray-600" /> : <FileText size={20} className="text-gray-400 mx-2" />}
+                  {pendingFile.type === 'image' ? <img src={pendingFile.content} className="h-12 w-12 object-cover rounded-lg" /> : <FileText size={20} className="text-gray-400 mx-2" />}
                   <span className="text-[10px] text-gray-300 max-w-[100px] truncate">{pendingFile.name}</span>
-                  <button onClick={() => setPendingFile(null)} className="p-1 hover:bg-gray-700 rounded-full text-gray-500"><X size={12} /></button>
+                  <button onClick={() => setPendingFile(null)}><X size={12} /></button>
                 </div>
               )}
-
-              <div className="flex items-end gap-1 relative">
+              <div className="flex items-end gap-1 relative px-1">
                 <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
-                <button onClick={() => fileInputRef.current?.click()} className="p-3 text-gray-500 hover:text-yellow-500 transition-colors"><Paperclip size={20} /></button>
-                <button onClick={() => setIsEmojiOpen(!isEmojiOpen)} className={`p-3 transition-colors ${isEmojiOpen ? 'text-yellow-500' : 'text-gray-500 hover:text-yellow-500'}`}><Smile size={20} /></button>
-
-                {isEmojiOpen && <EmojiPicker onSelect={(emoji) => { setInput(prev => prev + emoji); setIsEmojiOpen(false); }} />}
-
+                <button onClick={() => fileInputRef.current?.click()} className="p-2 md:p-3 text-gray-500 hover:text-yellow-500"><Paperclip size={18} /></button>
                 <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} placeholder="Interact with DarkPixels..." className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-700 text-sm md:text-base resize-none py-3 min-h-[44px] max-h-32" rows={1} />
-                <button onClick={() => handleSend()} disabled={isLoading || (!input.trim() && !pendingFile)} className={`p-3 rounded-2xl transition-all ${input.trim() || pendingFile ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/30' : 'bg-gray-800 text-gray-600'}`}><Send size={20} /></button>
+                <button onClick={() => handleSend()} disabled={isLoading} className={`p-2 md:p-3 rounded-2xl transition-all ${input.trim() || pendingFile ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-gray-600'}`}><Send size={18} /></button>
               </div>
             </div>
-            <div className="flex flex-col items-center gap-2 mt-4">
-              <img src="/logo.png" alt="DarkPixels AI Logo" className="w-8 h-8 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500" />
-              <p className="text-center text-[8px] text-gray-700 tracking-[0.5em] uppercase font-mono">Powered by Gokul x DarkPixels AI</p>
+            <div className="flex items-center justify-center gap-3 mt-4 opacity-40 hover:opacity-100 transition-opacity duration-500 text-center px-4">
+              <img src="/logo.png" alt="DarkPixels AI Logo" className="w-4 h-4 grayscale shrink-0" />
+              <p className="text-[10px] text-gray-500 font-mono uppercase tracking-[0.1em] leading-relaxed">
+                <span className="font-bold text-gray-300">DARKPIXELS AI</span> can make mistakes. Check important info.
+              </p>
             </div>
           </footer>
         </div>
-
         {previewCode && <CanvasPanel code={previewCode} onClose={() => setPreviewCode(null)} />}
       </div>
-
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} settings={settings} onSave={setSettings} />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        user={user}
+        onLogin={() => handleGoogleLogin()}
+        onClearHistory={handleClearHistory}
+      />
     </div>
   );
 };

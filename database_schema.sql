@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS threads (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title TEXT,
+    type VARCHAR(50) DEFAULT 'chat',
     created_at BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW()) * 1000), -- Storing as MS timestamp to match frontend logic
     updated_at BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW()) * 1000)
 );

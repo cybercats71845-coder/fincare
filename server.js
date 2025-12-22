@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS threads (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title TEXT,
+    type VARCHAR(50) DEFAULT 'chat',
     created_at BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW()) * 1000),
     updated_at BIGINT NOT NULL DEFAULT (EXTRACT(EPOCH FROM NOW()) * 1000)
 );
@@ -69,8 +70,10 @@ app.post('/api/init-db', async (req, res) => {
     try {
         const client = await pool.connect();
         await client.query(SCHEMA_SQL);
+        // Migration: Add type if not exists
+        await client.query(`ALTER TABLE threads ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'chat'`);
         client.release();
-        res.json({ status: 'success', message: 'Database initialized' });
+        res.json({ status: 'success', message: 'Database initialized and migrated' });
     } catch (err) {
         console.error('Init DB Error:', err);
         res.status(500).json({ status: 'error', message: err.message });
@@ -116,11 +119,11 @@ app.get('/api/threads', async (req, res) => {
 
 // Create Thread
 app.post('/api/threads', async (req, res) => {
-    const { userId, title } = req.body;
+    const { userId, title, type } = req.body;
     try {
         const result = await pool.query(
-            'INSERT INTO threads (user_id, title) VALUES ($1, $2) RETURNING *',
-            [userId, title]
+            'INSERT INTO threads (user_id, title, type) VALUES ($1, $2, $3) RETURNING *',
+            [userId, title, type || 'chat']
         );
         res.json(result.rows[0]);
     } catch (err) {
