@@ -161,6 +161,8 @@ const cleanAIResponse = (text: string) => {
     .replace(/<\/s>/g, '')
     .replace(/\[INST\]/g, '')
     .replace(/\[\/INST\]/g, '')
+    .replace(/<system>[\s\S]*?<\/system>/gi, '')
+    .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
     .replace(/<\|start_header_id\|>.*?<\|end_header_id\|>/g, '')
     .replace(/<\|eot_id\|>/g, '')
     .trim();
