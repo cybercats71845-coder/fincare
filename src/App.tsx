@@ -55,7 +55,7 @@ const TEXT_MODEL_ID = getEnv("REACT_APP_TEXT_MODEL_ID", "google/gemini-2.0-flash
 const IMAGE_MODEL_ID = getEnv("REACT_APP_IMAGE_MODEL_ID", "pollinations");
 
 // 5. FALLBACK MODEL ID (Used if primary fails)
-const FALLBACK_MODEL_ID = getEnv("REACT_APP_FALLBACK_MODEL_ID", "mistralai/mistral-7b-instruct:free");
+const FALLBACK_MODEL_ID = getEnv("REACT_APP_FALLBACK_MODEL_ID", "mistralai/mistral-7b-instruct:free,meta-llama/llama-3-8b-instruct:free,microsoft/phi-3-mini-128k-instruct:free");
 
 // 5. BACKEND API BASE URL
 const API_BASE_URL = '/api';
@@ -1078,11 +1078,25 @@ const DarkPixelsInner = () => {
       try {
         data = await performApiCall(selectedModel);
       } catch (err: any) {
-        // If primary model hits rate limit and we have a fallback
-        if ((err.message.includes('429') || err.message.includes('rate_limit')) && selectedModel === TEXT_MODEL_ID) {
-          setLoadingText("Primary AI busy, switching to Backup AI...");
-          data = await performApiCall(FALLBACK_MODEL_ID);
-          selectedModel = FALLBACK_MODEL_ID; // Update for UI record
+        // Multi-Model Fallback Logic
+        const isRateLimit = err.message.includes('429') || err.message.includes('rate_limit') || err.message.includes('402');
+        if (isRateLimit && selectedModel === TEXT_MODEL_ID) {
+          const fallbacks = FALLBACK_MODEL_ID.split(',').map((f: string) => f.trim()).filter(Boolean);
+          let fallbackSuccess = false;
+
+          for (const fallbackModel of fallbacks) {
+            try {
+              setLoadingText(`AI busy, trying ${fallbackModel.split('/').pop()?.split(':')[0]}...`);
+              data = await performApiCall(fallbackModel);
+              selectedModel = fallbackModel;
+              fallbackSuccess = true;
+              break;
+            } catch (fallbackErr) {
+              console.error(`Fallback failed for ${fallbackModel}:`, fallbackErr);
+            }
+          }
+
+          if (!fallbackSuccess) throw err;
         } else {
           throw err;
         }
