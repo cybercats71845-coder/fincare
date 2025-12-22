@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Send, Settings, Paperclip, Image as ImageIcon,
-  FileText, X, Cpu,
-  Download, Trash2, Terminal,
-  Zap, Code, Wind, MessageCircle, BrainCircuit,
+  FileText, X,
+  Download, Trash2,
+  Code, Wind, MessageCircle, BrainCircuit,
   Plus, Sidebar as SidebarIcon, User as UserIcon, LogOut, LogIn,
   LayoutTemplate, Sparkles,
   Eye, FileCode, Layout, MessageSquareText, History,
-  Palette, Loader2, AlertCircle, RefreshCw, Copy, UserCheck, Square, Smile
+  Palette, Loader2, AlertCircle, RefreshCw, Copy, UserCheck, Square
 } from 'lucide-react';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
@@ -47,7 +47,7 @@ const PRIMARY_MODEL = getEnv("REACT_APP_TEXT_MODEL_ID", "mistralai/mistral-7b-in
 // 4. FALLBACK MODELS (Tried in order if primary fails)
 const FALLBACK_MODELS = (getEnv("REACT_APP_FALLBACK_MODEL_ID", "") || "")
   .split(',')
-  .map(m => m.trim())
+  .map((m: string) => m.trim())
   .filter(Boolean);
 
 // 5. IMAGE MODEL (Pollinations)
@@ -176,22 +176,6 @@ const getModeColors = (_mode: AppMode) => {
     shadow: 'shadow-yellow-900/20',
     badge: 'bg-yellow-500/20'
   };
-};
-
-const getModeName = (mode: AppMode) => {
-  switch (mode) {
-    case 'canvas': return 'DarkPixels Dev';
-    case 'image': return 'DarkPixels Imagine';
-    default: return 'DarkPixels';
-  }
-};
-
-const getModeIcon = (mode: AppMode) => {
-  switch (mode) {
-    case 'canvas': return <Zap size={10} className="text-yellow-500" />;
-    case 'image': return <Palette size={10} className="text-yellow-500" />;
-    default: return <Terminal size={10} className="text-yellow-500" />;
-  }
 };
 
 const GUEST_THREADS_KEY = 'dp_guest_threads';
@@ -432,7 +416,6 @@ const Sidebar = ({
 
 const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Message, onPreview: (code: string) => void, appMode: AppMode, onRetry?: (content: string) => void }) => {
   const isUser = message.role === 'user';
-  const colors = getModeColors(appMode);
 
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -684,7 +667,7 @@ const DarkPixelsInner = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [appMode, setAppMode] = useState<AppMode>('chat');
-  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+  const [settings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [previewCode, setPreviewCode] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<{ name: string, content: string, type: 'image' | 'text' } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
