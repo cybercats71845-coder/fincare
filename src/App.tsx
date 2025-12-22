@@ -124,7 +124,7 @@ const DEFAULT_SETTINGS: AppSettings = {
 };
 
 // --- Helper Functions ---
-const detectIntent = (text: string, appMode: AppMode, hasImage: boolean): string => {
+const detectIntent = (text: string, appMode: AppMode, _hasImage: boolean): string => {
   const t = text.toLowerCase();
 
   // 1. Image Generation Check
@@ -146,31 +146,26 @@ const extractCodeBlock = (content: string): string | null => {
 };
 
 // Helper to convert chat history array to a single prompt string for the custom API
+/* Unused in current implementation
 const buildPromptFromHistory = (systemPrompt: string, messages: Message[], currentInput: string): string => {
   let prompt = `System: ${systemPrompt}\n\n`;
-
-  // Take last 6 messages to keep context but not overflow context window
   const recentMessages = messages.slice(-6);
-
   recentMessages.forEach(msg => {
     const role = msg.role === 'user' ? 'User' : 'Assistant';
     let content = msg.content;
-
-    // Handle multimodal content (just extract text)
     if (Array.isArray(content)) {
-      const textPart = content.find((c: any) => c.type === 'text');
-      content = textPart ? textPart.text : "[Image upload]";
+        const textPart = content.find((c: any) => c.type === 'text');
+        content = textPart ? textPart.text : "[Image upload]";
     }
-
     prompt += `${role}: ${content}\n`;
   });
-
   prompt += `User: ${currentInput}\nAssistant:`;
   return prompt;
 };
+*/
 
 // Unified Yellow/Black Theme
-const getModeColors = (mode: AppMode) => {
+const getModeColors = (_mode: AppMode) => {
   return {
     text: 'text-yellow-500',
     bg: 'bg-yellow-500',
@@ -350,8 +345,6 @@ const Sidebar = ({
   const sidebarClasses = isOpen
     ? "w-64 translate-x-0"
     : "w-0 -translate-x-full overflow-hidden opacity-0 md:opacity-100 md:w-0";
-
-  const colors = getModeColors(appMode);
 
   // Filters
   const devThreads = threads.filter((t: Thread) => t.type === 'dev');
