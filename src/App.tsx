@@ -140,9 +140,19 @@ const detectIntent = (text: string, appMode: AppMode, _hasImage: boolean): strin
   const t = text.toLowerCase();
 
   // 1. Image Generation Check
-  if (appMode === 'image' ||
-    /(create|gen|make|draw|render|vis|paint|sketch).*(img|image|pic|photo|paint|art|draw|illust|sketch)/.test(t) ||
-    /(draw|gen|create).*(bird|dog|cat|landscape|city|logo)/.test(t)) {
+  const imageKeywords = [
+    'create', 'gen', 'make', 'draw', 'render', 'vis', 'paint', 'sketch', 'photo',
+    'illustrate', 'generate', 'imagine', 'portrait', 'wallpaper', 'logo', 'background'
+  ];
+  const imageSubjects = [
+    'img', 'image', 'pic', 'photo', 'paint', 'art', 'draw', 'illust', 'sketch',
+    'bird', 'dog', 'cat', 'landscape', 'city', 'logo', 'person', 'woman', 'man', 'car'
+  ];
+
+  const hasKeyword = imageKeywords.some(kw => t.includes(kw));
+  const hasSubject = imageSubjects.some(sj => t.includes(sj));
+
+  if (appMode === 'image' || (hasKeyword && hasSubject) || t.startsWith('/draw ') || t.startsWith('/imagine ')) {
     return MODELS.image.id;
   }
 
@@ -830,13 +840,28 @@ const DarkPixelsInner = () => {
 
     if (activeId) saveMsg(userMsg, activeId);
 
-    try {
-      if (model === MODELS.image.id) {
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(text)}?nologo=true&seed=${Math.floor(Math.random() * 1000000)}`;
-        const aiMsg: Message = { id: generateId(), role: 'assistant', content: `![Generated Image](${imageUrl})`, timestamp: Date.now(), modelUsed: model };
-        setMessages(prev => [...prev, aiMsg]); if (activeId) saveMsg(aiMsg, activeId); setIsLoading(false); return;
-      }
+    // --- DIRECT IMAGE GENERATION (Pollinations) ---
+    // We handle this separately to ensure NO text AI API calls are made for images
+    const isImageIntent = settings.autoRoute && detectIntent(text, appMode, !!currentFile) === MODELS.image.id;
 
+    if (appMode === 'image' || isImageIntent) {
+      setLoadingText("Generating Image...");
+      const prompt = text.replace(/^\/(draw|imagine)\s+/i, '');
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&seed=${Math.floor(Math.random() * 1000000)}`;
+      const aiMsg: Message = {
+        id: generateId(),
+        role: 'assistant',
+        content: `![Generated Image](${imageUrl})`,
+        timestamp: Date.now(),
+        modelUsed: MODELS.image.id
+      };
+      setMessages(prev => [...prev, aiMsg]);
+      if (activeId) saveMsg(aiMsg, activeId);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
       const history = messages.slice(-10); // Get more context
 
       const performCall = async (mId: string) => {
