@@ -455,19 +455,84 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
 
   const handleDownload = async (url: string) => {
     try {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = blobUrl;
-      a.download = `darkpixels-image-${Date.now()}.jpg`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(blobUrl);
-      document.body.removeChild(a);
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = url;
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      // Draw original image
+      ctx.drawImage(img, 0, 0);
+
+      // Setup watermark logo
+      const logo = new Image();
+      logo.src = '/logo.png';
+      await new Promise((resolve) => {
+        logo.onload = resolve;
+        logo.onerror = resolve; // Continue even if logo fails
+      });
+
+      // Watermark sizing logic (responsive to image size)
+      const basePadding = canvas.width * 0.02;
+      const watermarkHeight = canvas.height * 0.045;
+      const textPadding = watermarkHeight * 0.4;
+
+      // Calculate text width to size the background box
+      ctx.font = `bold ${watermarkHeight * 0.45}px monospace`;
+      const textMetrics = ctx.measureText('DARKPIXELS AI');
+      const logoSize = watermarkHeight * 0.65;
+      const boxWidth = logoSize + textMetrics.width + (textPadding * 3);
+      const boxHeight = watermarkHeight;
+
+      const boxX = canvas.width - boxWidth - basePadding;
+      const boxY = canvas.height - boxHeight - basePadding;
+
+      // Draw rounded background box
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+      ctx.beginPath();
+      // Simple rect fallback if roundRect is not supported in some older environments
+      if (ctx.roundRect) {
+        ctx.roundRect(boxX, boxY, boxWidth, boxHeight, 8);
+      } else {
+        ctx.rect(boxX, boxY, boxWidth, boxHeight);
+      }
+      ctx.fill();
+
+      // Draw Logo
+      ctx.drawImage(logo, boxX + textPadding, boxY + (boxHeight - logoSize) / 2, logoSize, logoSize);
+
+      // Draw Branded Text
+      ctx.fillStyle = '#EAB308'; // yellow-500
+      ctx.textBaseline = 'middle';
+      ctx.fillText('DARKPIXELS AI', boxX + logoSize + (textPadding * 1.5), boxY + boxHeight / 2);
+
+      // Convert to blob and download
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `darkpixels-${Date.now()}.png`;
+        a.click();
+        URL.revokeObjectURL(blobUrl);
+      }, 'image/png');
+
     } catch (err) {
       console.error("Download failed", err);
-      window.open(url, '_blank');
+      // Fallback to simple download if canvas fails
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `darkpixels-${Date.now()}.jpg`;
+      a.click();
     }
   };
 
@@ -523,7 +588,7 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
           <img
             src={imageMatch[2]}
             alt={imageMatch[1] || "Generated Image"}
-            className={`max-w-full rounded-xl border border-gray-800 shadow-lg cursor-pointer hover:scale-[1.01] transition-transform ${!imgLoaded || imgError ? 'hidden' : 'block'}`}
+            className={`max-w-full rounded-xl border border-gray-800 shadow-lg cursor-pointer hover:scale-[1.01] transition-all duration-700 ease-out ${!imgLoaded || imgError ? 'opacity-0 scale-95 h-0' : 'opacity-100 scale-100 h-auto'}`}
             loading="lazy"
             onLoad={() => setImgLoaded(true)}
             onError={() => { setImgError(true); setImgLoaded(true); }}
