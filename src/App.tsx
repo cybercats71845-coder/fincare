@@ -15,13 +15,17 @@ import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
  * DARKPIXELS - Advanced AI Interface
  */
 const getEnv = (key: string, fallback: string) => {
-  if (key === 'REACT_APP_CUSTOM_API_URL') return import.meta.env.REACT_APP_CUSTOM_API_URL || fallback;
-  if (key === 'REACT_APP_CUSTOM_API_KEY') return import.meta.env.REACT_APP_CUSTOM_API_KEY || fallback;
-  if (key === 'REACT_APP_TEXT_MODEL_ID') return import.meta.env.REACT_APP_TEXT_MODEL_ID || fallback;
-  if (key === 'REACT_APP_FALLBACK_MODEL_ID') return import.meta.env.REACT_APP_FALLBACK_MODEL_ID || fallback;
-  if (key === 'REACT_APP_IMAGE_MODEL_ID') return import.meta.env.REACT_APP_IMAGE_MODEL_ID || fallback;
-  if (key === 'VITE_GOOGLE_CLIENT_ID') return import.meta.env.VITE_GOOGLE_CLIENT_ID || fallback;
-  return import.meta.env[key] || fallback;
+  const viteKey = key.startsWith('REACT_APP_') ? key.replace('REACT_APP_', 'VITE_') : key;
+
+  // Check for various ways Vite/Vercel might expose these
+  return import.meta.env[viteKey] ||
+    import.meta.env[key] ||
+    (key === 'REACT_APP_CUSTOM_API_URL' ? import.meta.env.VITE_CUSTOM_API_URL || import.meta.env.REACT_APP_CUSTOM_API_URL : null) ||
+    (key === 'REACT_APP_CUSTOM_API_KEY' ? import.meta.env.VITE_CUSTOM_API_KEY || import.meta.env.REACT_APP_CUSTOM_API_KEY : null) ||
+    (key === 'REACT_APP_TEXT_MODEL_ID' ? import.meta.env.VITE_TEXT_MODEL_ID || import.meta.env.REACT_APP_TEXT_MODEL_ID : null) ||
+    (key === 'REACT_APP_FALLBACK_MODEL_ID' ? import.meta.env.VITE_FALLBACK_MODEL_ID || import.meta.env.REACT_APP_FALLBACK_MODEL_ID : null) ||
+    (key === 'REACT_APP_IMAGE_MODEL_ID' ? import.meta.env.VITE_IMAGE_MODEL_ID || import.meta.env.REACT_APP_IMAGE_MODEL_ID : null) ||
+    fallback;
 };
 
 const generateId = () => {
@@ -849,13 +853,24 @@ const DarkPixelsInner = () => {
       };
 
       let data;
-      try { data = await performCall(model); }
+      try {
+        data = await performCall(model);
+        if (!data.choices?.[0]?.message?.content) throw new Error("Empty response content");
+      }
       catch (e: any) {
         if (e.name === 'AbortError') return;
         let success = false;
         if (FALLBACK_MODELS.length > 0) {
           for (const fb of FALLBACK_MODELS) {
-            try { setLoadingText("DarkPixels is busy, retrying..."); data = await performCall(fb); model = fb; success = true; break; } catch { continue; }
+            try {
+              setLoadingText("DarkPixels is busy, retrying...");
+              const fbData = await performCall(fb);
+              if (!fbData.choices?.[0]?.message?.content) throw new Error("Empty fallback content");
+              data = fbData;
+              model = fb;
+              success = true;
+              break;
+            } catch { continue; }
           }
         }
         if (!success) throw e;
