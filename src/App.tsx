@@ -542,6 +542,13 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
             </div>
           )}
 
+          {imgLoaded && !imgError && (
+            <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 pointer-events-none select-none overflow-hidden origin-bottom-right scale-90 md:scale-100 shadow-2xl">
+              <img src="/logo.png" alt="" className="w-3.5 h-3.5 object-contain" />
+              <span className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest leading-none">DARKPIXELS AI</span>
+            </div>
+          )}
+
           {imgLoaded && !imgError && <p className="text-xs text-gray-500 mt-2">{cleanAIResponse(text.replace(imageMatch[0], ''))}</p>}
         </div>
       );
