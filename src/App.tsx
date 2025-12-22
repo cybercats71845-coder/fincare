@@ -679,9 +679,7 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
         <div className={`relative px-5 py-4 rounded-2xl shadow-lg backdrop-blur-sm group ${isUser ? 'bg-yellow-500 text-black rounded-br-none font-medium' : 'bg-gray-800/80 border border-gray-700 text-gray-100 rounded-bl-none'}`}>
           {message.role === 'assistant' && (
             <div className="absolute -top-7 left-0 flex items-center gap-2 mb-2 pointer-events-none">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center border-2 border-yellow-500/30 bg-black overflow-hidden shadow-sm">
-                <img src="/logo.png" alt="AI" className="w-4 h-4 object-contain" />
-              </div>
+              <img src="/logo.png" alt="AI" className="w-4 h-4 object-contain shadow-sm" />
               <span className="text-[10px] font-bold text-yellow-500 uppercase tracking-tighter">DARKPIXELS AI</span>
             </div>
           )}
