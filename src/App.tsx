@@ -1076,7 +1076,9 @@ const DarkPixelsInner = () => {
         }
       }
 
-      const aiText = data.choices?.[0]?.message?.content || "No response.";
+      let aiText = data.choices?.[0]?.message?.content || "No response.";
+      // Clean up common BOS tokens that leak from some models
+      aiText = aiText.trim().replace(/^<s>\s*/i, '');
 
       if (appMode === 'canvas') {
         const extracted = extractCodeBlock(aiText);
