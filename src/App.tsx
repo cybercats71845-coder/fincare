@@ -67,12 +67,12 @@ const GOOGLE_CLIENT_ID = getEnv("VITE_GOOGLE_CLIENT_ID", "");
 
 // --- Dynamic Model Configuration ---
 const MODELS = {
-  general: { name: "DarkPixels Chat", id: TEXT_MODEL_ID, icon: <MessageCircle size={14} /> },
-  code: { name: "DarkPixels Dev", id: TEXT_MODEL_ID, icon: <Code size={14} /> },
-  deep: { name: "DarkPixels Pro", id: TEXT_MODEL_ID, icon: <BrainCircuit size={14} /> },
-  fast: { name: "DarkPixels Lite", id: TEXT_MODEL_ID, icon: <Wind size={14} /> },
-  vision: { name: "DarkPixels Vision", id: TEXT_MODEL_ID, icon: <Eye size={14} /> },
-  image: { name: "DarkPixels Imagine", id: IMAGE_MODEL_ID, icon: <Palette size={14} /> }
+  general: { name: "DarkPixels AI", id: TEXT_MODEL_ID, icon: <MessageCircle size={14} /> },
+  code: { name: "DarkPixels AI", id: TEXT_MODEL_ID, icon: <Code size={14} /> },
+  deep: { name: "DarkPixels AI", id: TEXT_MODEL_ID, icon: <BrainCircuit size={14} /> },
+  fast: { name: "DarkPixels AI", id: TEXT_MODEL_ID, icon: <Wind size={14} /> },
+  vision: { name: "DarkPixels AI", id: TEXT_MODEL_ID, icon: <Eye size={14} /> },
+  image: { name: "DarkPixels AI", id: IMAGE_MODEL_ID, icon: <Palette size={14} /> }
 };
 
 const DEFAULT_SYSTEM_PROMPT = `You are DarkPixels AI.
@@ -294,8 +294,8 @@ const CanvasPanel = ({ code, onClose }: { code: string, onClose: () => void }) =
 const AuthScreen = ({ onGuest, onGoogleLogin }: { onGuest: () => void, onGoogleLogin: () => void }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050505] p-4">
     <div className="w-full max-w-md bg-[#0a0a0a] border border-gray-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center text-center">
-      <div className="w-16 h-16 rounded-2xl bg-yellow-500 flex items-center justify-center shadow-lg shadow-yellow-900/30 mb-6">
-        <Terminal size={32} className="text-black" />
+      <div className="w-20 h-20 rounded-2xl bg-black border border-gray-800 flex items-center justify-center shadow-lg shadow-yellow-900/10 mb-6 overflow-hidden">
+        <img src="/logo.png" alt="DarkPixels Logo" className="w-full h-full object-contain" />
       </div>
       <h1 className="text-3xl font-bold text-white mb-2">DarkPixels AI</h1>
       <p className="text-gray-500 mb-8 lowercase tracking-[0.2em]">Unrestricted Intelligence Interface</p>
@@ -1069,7 +1069,7 @@ const DarkPixelsInner = () => {
 
           for (const fallbackModel of fallbacks) {
             try {
-              setLoadingText(`AI busy, trying ${fallbackModel.split('/').pop()?.split(':')[0]}...`);
+              setLoadingText(`DarkPixels AI is busy, trying alternate system...`);
               data = await performApiCall(fallbackModel);
               selectedModel = fallbackModel;
               fallbackSuccess = true;
@@ -1135,8 +1135,8 @@ const DarkPixelsInner = () => {
               >
                 <SidebarIcon size={20} />
               </button>
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shadow-lg ${activeColors.bg} ${activeColors.shadow}`}>
-                <Terminal size={16} className="text-black" />
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-lg bg-black border border-gray-800 overflow-hidden`}>
+                <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
               </div>
               <h1 className={`font-bold tracking-tight ${activeColors.text} hidden sm:block uppercase`}>
                 DARKPIXELS
@@ -1206,7 +1206,10 @@ const DarkPixelsInner = () => {
                 <button onClick={() => handleSend()} disabled={isLoading || (!input.trim() && !pendingFile)} className={`p-3 rounded-2xl transition-all ${input.trim() || pendingFile ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/30' : 'bg-gray-800 text-gray-600'}`}><Send size={20} /></button>
               </div>
             </div>
-            <p className="text-center text-[8px] text-gray-700 mt-2 tracking-[0.5em] uppercase font-mono">Powered by Gokul x DarkPixels AI</p>
+            <div className="flex flex-col items-center gap-2 mt-4">
+              <img src="/logo.png" alt="DarkPixels AI Logo" className="w-8 h-8 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-500" />
+              <p className="text-center text-[8px] text-gray-700 tracking-[0.5em] uppercase font-mono">Powered by Gokul x DarkPixels AI</p>
+            </div>
           </footer>
         </div>
 
