@@ -15,6 +15,14 @@ import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
  * DARKPIXELS - Advanced AI Interface
  */
 const getEnv = (key: string, fallback: string) => {
+  // Vite requires static access for replacement during build
+  if (key === 'REACT_APP_CUSTOM_API_URL') return import.meta.env.REACT_APP_CUSTOM_API_URL || fallback;
+  if (key === 'REACT_APP_CUSTOM_API_KEY') return import.meta.env.REACT_APP_CUSTOM_API_KEY || fallback;
+  if (key === 'REACT_APP_TEXT_MODEL_ID') return import.meta.env.REACT_APP_TEXT_MODEL_ID || fallback;
+  if (key === 'REACT_APP_FALLBACK_MODEL_ID') return import.meta.env.REACT_APP_FALLBACK_MODEL_ID || fallback;
+  if (key === 'REACT_APP_IMAGE_MODEL_ID') return import.meta.env.REACT_APP_IMAGE_MODEL_ID || fallback;
+  if (key === 'VITE_GOOGLE_CLIENT_ID') return import.meta.env.VITE_GOOGLE_CLIENT_ID || fallback;
+
   // @ts-ignore
   return import.meta.env[key] || fallback;
 };
