@@ -43,19 +43,19 @@ const generateId = () => {
 // ==================================================================================
 
 // 1. API URL for AI Completions
-const AI_COMPLETIONS_URL = getEnv("REACT_APP_CUSTOM_API_URL", "https://openrouter.ai/api/v1/chat/completions");
+const AI_COMPLETIONS_URL = getEnv("REACT_APP_CUSTOM_API_URL", "");
 
 // 2. API KEY for AI Completions
-const AI_COMPLETIONS_KEY = getEnv("REACT_APP_CUSTOM_API_KEY", "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");
+const AI_COMPLETIONS_KEY = getEnv("REACT_APP_CUSTOM_API_KEY", "");
 
 // 3. TEXT MODEL ID
-const TEXT_MODEL_ID = getEnv("REACT_APP_TEXT_MODEL_ID", "google/gemini-2.0-flash-exp:free");
+const TEXT_MODEL_ID = getEnv("REACT_APP_TEXT_MODEL_ID", "");
 
 // 4. IMAGE MODEL ID
-const IMAGE_MODEL_ID = getEnv("REACT_APP_IMAGE_MODEL_ID", "pollinations");
+const IMAGE_MODEL_ID = getEnv("REACT_APP_IMAGE_MODEL_ID", "");
 
 // 5. FALLBACK MODEL ID (Used if primary fails)
-const FALLBACK_MODEL_ID = getEnv("REACT_APP_FALLBACK_MODEL_ID", "mistralai/mistral-7b-instruct:free,meta-llama/llama-3-8b-instruct:free,microsoft/phi-3-mini-128k-instruct:free");
+const FALLBACK_MODEL_ID = getEnv("REACT_APP_FALLBACK_MODEL_ID", "");
 
 // 5. BACKEND API BASE URL
 const API_BASE_URL = '/api';
