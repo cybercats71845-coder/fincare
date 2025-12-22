@@ -729,11 +729,11 @@ const SettingsModal = ({
 // --- Main App Logic ---
 
 const EmojiPicker = ({ onSelect }: { onSelect: (emoji: string) => void }) => {
-  const emojis = ['😊', '😂', '🔥', '✨', '💻', '🚀', '🤖', '🎨', '👍', '❤️', '🤔', '🎉', '💡', '✅', '⚡', '🌈'];
+  const emojis = ['😊', '😂', '🔥', '✨', '💻', '🚀', '🤖', '🎨', '👍', '❤️', '🤔', '🎉', '💡', '✅', '⚡', '🌈', '🫂', '⭐', '🔥', '🎯', '👋', '🙌', '🔍', '📱'];
   return (
-    <div className="absolute bottom-full mb-2 left-0 bg-gray-900 border border-gray-800 rounded-2xl p-3 shadow-2xl grid grid-cols-4 gap-2 z-50">
-      {emojis.map(e => (
-        <button key={e} onClick={() => onSelect(e)} className="text-xl hover:bg-gray-800 p-2 rounded-xl transition-colors">{e}</button>
+    <div className="absolute bottom-full mb-2 left-0 bg-gray-900/95 backdrop-blur-xl border border-gray-800 rounded-2xl p-3 shadow-2xl grid grid-cols-6 gap-2 z-50 animate-in fade-in slide-in-from-bottom-2">
+      {emojis.map((e, i) => (
+        <button key={i} onClick={() => onSelect(e)} className="text-xl hover:bg-gray-800 hover:scale-110 p-2 rounded-xl transition-all duration-200">{e}</button>
       ))}
     </div>
   );
@@ -1103,11 +1103,11 @@ const DarkPixelsInner = () => {
       }
 
       let aiText = data.choices?.[0]?.message?.content || "";
-      // Clean up common BOS tokens that leak from some models
-      aiText = aiText.trim().replace(/^<s>\s*/i, '');
+      // Clean up common BOS/EOS tokens that leak from some models (e.g. <s>, </s>)
+      aiText = aiText.replace(/<\/?s>/gi, '').trim();
 
       if (!aiText) {
-        aiText = "I'm sorry, I was unable to generate a coherent response. This can happen if the model is busy or the input was unclear. Please try switching models or rephrasing.";
+        aiText = "I'm sorry, I was unable to generate a coherent response. 🤖 This can happen if the model is busy or the input was unclear. Please try switching models or rephrasing.";
       }
 
       if (appMode === 'canvas') {
