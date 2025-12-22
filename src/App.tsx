@@ -435,6 +435,52 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
 
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const [watermarkedUrl, setWatermarkedUrl] = useState<string | null>(null);
+
+  const bakeWatermark = async (url: string) => {
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = url;
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width; canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return url;
+
+      ctx.drawImage(img, 0, 0);
+
+      const logo = new Image();
+      logo.src = '/logo.png';
+      await new Promise(res => { logo.onload = res; logo.onerror = res; });
+
+      const padding = canvas.width * 0.02;
+      const h = canvas.height * 0.045;
+      const ctxFont = `bold ${h * 0.45}px monospace`;
+      ctx.font = ctxFont;
+      const tw = ctx.measureText('DARKPIXELS AI').width;
+      const ls = h * 0.65;
+      const bw = ls + tw + (h * 0.4 * 3);
+      const bx = canvas.width - bw - padding;
+      const by = canvas.height - h - padding;
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(bx, by, bw, h, 8); else ctx.rect(bx, by, bw, h);
+      ctx.fill();
+
+      ctx.drawImage(logo, bx + (h * 0.4), by + (h - ls) / 2, ls, ls);
+      ctx.fillStyle = '#EAB308';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('DARKPIXELS AI', bx + ls + (h * 0.4 * 1.5), by + h / 2);
+
+      return canvas.toDataURL('image/png');
+    } catch (e) {
+      console.error("Watermarking failed", e);
+      return url;
+    }
+  };
 
   useEffect(() => {
     if (!imgLoaded && !imgError && message.role !== 'user') {
@@ -586,19 +632,24 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
             </div>
           )}
           <img
-            src={imageMatch[2]}
+            src={watermarkedUrl || imageMatch[2]}
             alt={imageMatch[1] || "Generated Image"}
-            className={`max-w-full rounded-xl border border-gray-800 shadow-lg cursor-pointer hover:scale-[1.01] transition-all duration-700 ease-out ${!imgLoaded || imgError ? 'opacity-0 scale-95 h-0' : 'opacity-100 scale-100 h-auto'}`}
+            className={`max-w-full rounded-xl border border-gray-800 shadow-lg select-none pointer-events-auto transition-all duration-1000 ease-in-out ${!imgLoaded || imgError ? 'opacity-0 scale-95 h-0' : 'opacity-100 scale-100 h-auto'}`}
             loading="lazy"
-            onLoad={() => setImgLoaded(true)}
+            onLoad={async () => {
+              if (!watermarkedUrl && !imgError) {
+                const baked = await bakeWatermark(imageMatch[2]);
+                setWatermarkedUrl(baked);
+              }
+              setImgLoaded(true);
+            }}
             onError={() => { setImgError(true); setImgLoaded(true); }}
-            onClick={() => window.open(imageMatch[2], '_blank')}
           />
 
           {imgLoaded && !imgError && (
             <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
-                onClick={() => handleDownload(imageMatch[2])}
+                onClick={() => handleDownload(watermarkedUrl || imageMatch[2])}
                 className="p-1.5 bg-black/50 hover:bg-black/70 text-white rounded-lg backdrop-blur-sm transition-colors"
                 title="Download Image"
               >
@@ -607,7 +658,7 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
             </div>
           )}
 
-          {imgLoaded && !imgError && (
+          {imgLoaded && !imgError && !watermarkedUrl && (
             <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-black/40 backdrop-blur-md rounded-lg border border-white/10 pointer-events-none select-none overflow-hidden origin-bottom-right scale-90 md:scale-100 shadow-2xl">
               <img src="/logo.png" alt="" className="w-3.5 h-3.5 object-contain" />
               <span className="text-[10px] font-bold text-yellow-500 uppercase tracking-widest leading-none">DARKPIXELS AI</span>
