@@ -7,8 +7,10 @@ import {
   Plus, Sidebar as SidebarIcon, User as UserIcon, LogOut,
   LayoutTemplate, Sparkles,
   Eye, FileCode, Layout, MessageSquareText, History,
-  Palette, Loader2, AlertCircle, RefreshCw, Copy
+  Palette, Loader2, AlertCircle, RefreshCw, Copy, Smile
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
 /**
@@ -567,64 +569,60 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
       );
     }
 
-    const parts = text.split(/(```[\s\S]*?```)/g);
+    return (
+      <div className="markdown-container prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black prose-pre:border prose-pre:border-gray-800">
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={{
+          code({ node, inline, className, children, ...props }: any) {
+            const match = /language-(\w+)/.exec(className || '');
+            const codeContent = String(children).replace(/\n$/, '');
 
-    return parts.map((part, index) => {
-      if (part.startsWith('```') && part.endsWith('```')) {
-        const codeContent = part.slice(3, -3).replace(/^[a-z]+\n/, '');
-
-        if (appMode === 'canvas') {
-          return (
-            <div key={index} className="my-3 p-4 rounded-xl bg-yellow-900/10 border border-yellow-500/30 flex items-center gap-3">
-              <div className="p-2 bg-yellow-500/20 rounded-lg">
-                <Sparkles size={20} className="text-yellow-500 animate-pulse" />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-bold text-white">App Generated</h4>
-                <p className="text-xs text-yellow-300">Code is ready in the Canvas panel.</p>
-              </div>
-              <button
-                onClick={() => onPreview(codeContent)}
-                className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-black text-xs font-bold rounded-lg transition-colors text-nowrap"
-              >
-                View Canvas
-              </button>
-            </div>
-          );
-        }
-
-        return (
-          <div key={index} className="my-3 overflow-hidden rounded-md bg-black border border-gray-800">
-            <div className="flex items-center justify-between px-4 py-2 bg-gray-900/50 border-b border-gray-800">
-              <span className="text-xs font-mono text-gray-400">Code</span>
-              <button
-                onClick={() => navigator.clipboard.writeText(codeContent)}
-                className="text-xs text-yellow-500 hover:text-yellow-400"
-              >
-                Copy
-              </button>
-            </div>
-            <pre className="p-4 overflow-x-auto text-sm font-mono text-gray-300">
-              {codeContent}
-            </pre>
-          </div>
-        );
-      }
-      return (
-        <div key={index} className="whitespace-pre-wrap relative group">
-          {part}
-          {part.trim().length > 0 && !isUser && (
-            <button
-              onClick={() => navigator.clipboard.writeText(part)}
-              className="absolute -right-1 -top-1 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-yellow-500 transition-all p-1"
-              title="Copy text"
-            >
-              <Copy size={12} />
-            </button>
-          )}
-        </div>
-      );
-    });
+            if (!inline && match) {
+              if (appMode === 'canvas') {
+                return (
+                  <div className="my-3 p-4 rounded-xl bg-yellow-900/10 border border-yellow-500/30 flex items-center gap-3 not-prose">
+                    <div className="p-2 bg-yellow-500/20 rounded-lg">
+                      <Sparkles size={20} className="text-yellow-500 animate-pulse" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-bold text-white mb-0">App Generated</h4>
+                      <p className="text-xs text-yellow-300 mb-0">Code is ready in the Canvas panel.</p>
+                    </div>
+                    <button
+                      onClick={() => onPreview(codeContent)}
+                      className="px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-black text-xs font-bold rounded-lg transition-colors text-nowrap"
+                    >
+                      View Canvas
+                    </button>
+                  </div>
+                );
+              }
+              return (
+                <div className="my-3 overflow-hidden rounded-md bg-black border border-gray-800 not-prose">
+                  <div className="flex items-center justify-between px-4 py-2 bg-gray-900/50 border-b border-gray-800">
+                    <span className="text-xs font-mono text-gray-400 capitalize">{match[1]}</span>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(codeContent)}
+                      className="text-xs text-yellow-500 hover:text-yellow-400 font-medium"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <pre className="p-4 overflow-x-auto text-sm font-mono text-gray-300 mb-0">
+                    {codeContent}
+                  </pre>
+                </div>
+              );
+            }
+            return <code className={`${className} bg-gray-900 text-yellow-500 px-1.5 py-0.5 rounded text-xs`} {...props}>{children}</code>;
+          },
+          img({ node, ...props }: any) {
+            return <img {...props} className="max-w-full rounded-xl border border-gray-800 shadow-lg my-2" loading="lazy" />;
+          }
+        }}>
+          {text}
+        </ReactMarkdown>
+      </div>
+    );
   };
 
   return (
@@ -728,11 +726,23 @@ const SettingsModal = ({
 
 // --- Main App Logic ---
 
+const EmojiPicker = ({ onSelect }: { onSelect: (emoji: string) => void }) => {
+  const emojis = ['😊', '😂', '🔥', '✨', '💻', '🚀', '🤖', '🎨', '👍', '❤️', '🤔', '🎉', '💡', '✅', '⚡', '🌈'];
+  return (
+    <div className="absolute bottom-full mb-2 left-0 bg-gray-900 border border-gray-800 rounded-2xl p-3 shadow-2xl grid grid-cols-4 gap-2 z-50">
+      {emojis.map(e => (
+        <button key={e} onClick={() => onSelect(e)} className="text-xl hover:bg-gray-800 p-2 rounded-xl transition-colors">{e}</button>
+      ))}
+    </div>
+  );
+};
+
 const DarkPixelsInner = () => {
   const [authState, setAuthState] = useState<'loading' | 'auth' | 'guest' | 'user'>('loading');
   const [user, setUser] = useState<User | null>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [currentThreadId, setCurrentThreadId] = useState<string | null>(null);
+  const [isEmojiOpen, setIsEmojiOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -1076,9 +1086,13 @@ const DarkPixelsInner = () => {
         }
       }
 
-      let aiText = data.choices?.[0]?.message?.content || "No response.";
+      let aiText = data.choices?.[0]?.message?.content || "";
       // Clean up common BOS tokens that leak from some models
       aiText = aiText.trim().replace(/^<s>\s*/i, '');
+
+      if (!aiText) {
+        aiText = "I'm sorry, I was unable to generate a coherent response. This can happen if the model is busy or the input was unclear. Please try switching models or rephrasing.";
+      }
 
       if (appMode === 'canvas') {
         const extracted = extractCodeBlock(aiText);
@@ -1182,9 +1196,13 @@ const DarkPixelsInner = () => {
                 </div>
               )}
 
-              <div className="flex items-end gap-1">
+              <div className="flex items-end gap-1 relative">
                 <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
                 <button onClick={() => fileInputRef.current?.click()} className="p-3 text-gray-500 hover:text-yellow-500 transition-colors"><Paperclip size={20} /></button>
+                <button onClick={() => setIsEmojiOpen(!isEmojiOpen)} className={`p-3 transition-colors ${isEmojiOpen ? 'text-yellow-500' : 'text-gray-500 hover:text-yellow-500'}`}><Smile size={20} /></button>
+
+                {isEmojiOpen && <EmojiPicker onSelect={(emoji) => { setInput(prev => prev + emoji); setIsEmojiOpen(false); }} />}
+
                 <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} placeholder="Interact with DarkPixels..." className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-700 text-sm md:text-base resize-none py-3 min-h-[44px] max-h-32" rows={1} />
                 <button onClick={() => handleSend()} disabled={isLoading || (!input.trim() && !pendingFile)} className={`p-3 rounded-2xl transition-all ${input.trim() || pendingFile ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/30' : 'bg-gray-800 text-gray-600'}`}><Send size={20} /></button>
               </div>
