@@ -7,9 +7,11 @@ import {
   Plus, Sidebar as SidebarIcon, User as UserIcon, LogOut,
   LayoutTemplate, Sparkles,
   Eye, FileCode, Layout, MessageSquareText, History,
-  Palette, Loader2, AlertCircle, RefreshCw, Copy, Smile
+  Palette, Loader2, AlertCircle, RefreshCw, Smile
 } from 'lucide-react';
+// @ts-ignore
 import ReactMarkdown from 'react-markdown';
+// @ts-ignore
 import remarkGfm from 'remark-gfm';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
