@@ -1117,11 +1117,8 @@ const DarkPixelsInner = () => {
           {/* Top Row: Brand & Actions */}
           <div className="w-full flex items-center justify-between px-3 md:px-6 py-2 md:py-4">
             <div className="flex items-center gap-2 md:gap-3">
-              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400">
-                <SidebarIcon size={18} />
-              </button>
-              <img src="/logo.png" alt="Logo" className="w-6 h-6 md:w-8 md:h-8 object-contain shrink-0" />
-              <h1 className="font-bold tracking-tight text-yellow-500 text-sm md:text-base uppercase truncate ml-1">DARKPIXELS AI</h1>
+              <img src="/logo.png" alt="Logo" className="w-10 h-10 md:w-8 md:h-8 object-contain shrink-0" />
+              <h1 className="font-bold tracking-tight text-yellow-500 text-xl md:text-base uppercase truncate">DARKPIXELS AI</h1>
             </div>
 
             {/* Desktop Navigation (Hidden on Mobile) */}
@@ -1148,7 +1145,7 @@ const DarkPixelsInner = () => {
           </div>
 
           {/* Bottom Row: Mobile Navigation (Only visible on Mobile) */}
-          <div className="md:hidden w-full px-3 pb-2.5">
+          <div className="md:hidden w-full px-3 pb-2 flex flex-col gap-2">
             <div className="bg-gray-900/50 p-1 rounded-xl flex items-center border border-gray-800 w-full">
               {['chat', 'canvas', 'image'].map((m) => (
                 <button
@@ -1160,10 +1157,21 @@ const DarkPixelsInner = () => {
                 </button>
               ))}
             </div>
+
+            {/* 3rd Row: Chat History Button */}
+            <div className="flex justify-start pb-1">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"
+              >
+                <History size={12} />
+                CHAT HISTORY
+              </button>
+            </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-3 md:p-6 scrollbar-thin scrollbar-thumb-gray-800 relative pt-[110px] md:pt-3">
+        <main className="flex-1 overflow-y-auto p-3 md:p-6 scrollbar-thin scrollbar-thumb-gray-800 relative pt-[155px] md:pt-3">
           <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end pb-2">
             {messages.length === 0 && (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-700 space-y-4 opacity-50 grayscale animate-pulse">
