@@ -802,8 +802,17 @@ const DarkPixelsInner = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingText, setLoadingText] = useState('Thinking...');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
   const [appMode, setAppMode] = useState<AppMode>('chat');
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) setIsSidebarOpen(false);
+      else setIsSidebarOpen(true);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [settings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [previewCode, setPreviewCode] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<{ name: string, content: string, type: 'image' | 'text' } | null>(null);
@@ -1075,95 +1084,142 @@ const DarkPixelsInner = () => {
   if (authState === 'auth') return <AuthScreen onGoogleLogin={() => handleGoogleLogin()} onGuest={handleGuest} />;
 
   return (
-    <div className="flex h-screen bg-[#050505] text-gray-100 font-sans overflow-hidden">
-      <Sidebar isOpen={isSidebarOpen} threads={threads} activeThreadId={currentThreadId} onSelectThread={(id: string) => {
-        setCurrentThreadId(id);
-        const thread = threads.find(t => t.id === id);
-        if (thread) {
-          const mode = thread.type === 'dev' ? 'canvas' : (thread.type === 'image' ? 'image' : 'chat');
-          setAppMode(mode);
-        }
-      }} onNewChat={() => createNewChat(appMode)} onDeleteThread={(id: string) => {
-        if (authState === 'user') fetch(`${API_BASE_URL}/threads/${id}`, { method: 'DELETE' }).then(() => fetchThreads());
-        else {
-          const updated = threads.filter(t => t.id !== id);
-          setThreads(updated);
-          localStorage.setItem(GUEST_THREADS_KEY, JSON.stringify(updated));
-          localStorage.removeItem(getGuestMessagesKey(id));
-          if (currentThreadId === id) setCurrentThreadId(null);
-        }
-      }} onCloseMobile={() => setIsSidebarOpen(false)} appMode={appMode} />
-      <div className="flex-1 flex overflow-hidden">
-        <div className={`flex-1 flex flex-col h-full relative ${previewCode ? 'border-r border-gray-800' : ''}`}>
-          <header className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-10 sticky top-0">
-            <div className="flex items-center gap-2 md:gap-3">
-              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"><SidebarIcon size={18} /></button>
-              <img src="/logo.png" alt="Logo" className="w-6 h-6 md:w-8 md:h-8 object-contain shrink-0" />
-              <h1 className="font-bold tracking-tight text-yellow-500 text-sm md:text-base uppercase truncate ml-1">DARKPIXELS AI</h1>
-            </div>
-            <div className="bg-gray-900/50 p-1 rounded-xl flex items-center border border-gray-800">
-              {['chat', 'canvas', 'image'].map((m) => (
-                <button key={m} onClick={() => switchMode(m as AppMode)} className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}`}>{m}</button>
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setIsSettingsOpen(true)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400"><Settings size={20} /></button>
-              <button onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }} className="p-2 hover:bg-gray-800 rounded-lg text-red-500"><LogOut size={20} /></button>
-            </div>
-          </header>
-
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 scrollbar-thin scrollbar-thumb-gray-800">
-            <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end pb-4">
-              {messages.length === 0 && (
-                <div className="flex-1 flex flex-col items-center justify-center text-gray-700 space-y-4 opacity-50 grayscale animate-pulse">
-                  <img src="/logo.png" alt="DarkPixels AI" className="w-16 h-16 opacity-20" />
-                  <div className="text-center font-mono text-[10px] tracking-[0.4em] uppercase">System Ready / Awaiting Interaction</div>
-                </div>
-              )}
-              {messages.map(m => (<MessageBubble key={m.id} message={m} onPreview={setPreviewCode} appMode={appMode} onRetry={handleSend} />))}
-              {isLoading && (
-                <div className="ml-4 text-[10px] animate-pulse text-yellow-500 font-mono uppercase tracking-widest flex items-center gap-2">
-                  <Loader2 size={10} className="animate-spin" /> {loadingText}
-                  <button onClick={handleStop} className="ml-2 p-1 bg-red-500/20 text-red-400 hover:text-red-300 rounded"><Square size={10} fill="currentColor" /></button>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-          </main>
-
-          <footer className="p-4 border-t border-gray-800 bg-[#050505]">
-            <div className={`max-w-3xl mx-auto relative flex flex-col gap-2 bg-gray-950/50 border rounded-3xl p-2 transition-all group ${getModeColors(appMode).border}`}>
-              {pendingFile && (
-                <div className="flex items-center gap-3 p-2 bg-black/60 rounded-xl w-fit border border-gray-700 ml-2 mt-1">
-                  {pendingFile.type === 'image' ? <img src={pendingFile.content} className="h-12 w-12 object-cover rounded-lg" /> : <FileText size={20} className="text-gray-400 mx-2" />}
-                  <span className="text-[10px] text-gray-300 max-w-[100px] truncate">{pendingFile.name}</span>
-                  <button onClick={() => setPendingFile(null)}><X size={12} /></button>
-                </div>
-              )}
-              <div className="flex items-end gap-1 relative px-1">
-                <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
-                <button onClick={() => fileInputRef.current?.click()} className="p-2 md:p-3 text-gray-500 hover:text-yellow-500"><Paperclip size={18} /></button>
-                <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())} placeholder="Interact with DarkPixels..." className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-700 text-sm md:text-base resize-none py-3 min-h-[44px] max-h-32" rows={1} />
-                <button onClick={() => handleSend()} disabled={isLoading} className={`p-2 md:p-3 rounded-2xl transition-all ${input.trim() || pendingFile ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-gray-600'}`}><Send size={18} /></button>
-              </div>
-            </div>
-            <div className="flex items-center justify-center gap-3 mt-4 opacity-40 hover:opacity-100 transition-opacity duration-500 text-center px-4">
-              <img src="/logo.png" alt="DarkPixels AI Logo" className="w-4 h-4 grayscale shrink-0" />
-              <p className="text-[10px] text-gray-500 font-mono uppercase tracking-[0.1em] leading-relaxed">
-                <span className="font-bold text-gray-300">DARKPIXELS AI</span> can make mistakes. Check important info.
-              </p>
-            </div>
-          </footer>
-        </div>
-        {previewCode && <CanvasPanel code={previewCode} onClose={() => setPreviewCode(null)} />}
-      </div>
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        user={user}
-        onLogin={() => handleGoogleLogin()}
-        onClearHistory={handleClearHistory}
+    <div className="flex h-[100dvh] bg-[#050505] text-gray-100 font-sans overflow-hidden fixed inset-0">
+      <Sidebar
+        isOpen={isSidebarOpen}
+        threads={threads}
+        activeThreadId={currentThreadId}
+        onSelectThread={(id: string) => {
+          setCurrentThreadId(id);
+          const thread = threads.find(t => t.id === id);
+          if (thread) {
+            const mode = thread.type === 'dev' ? 'canvas' : (thread.type === 'image' ? 'image' : 'chat');
+            setAppMode(mode);
+          }
+        }}
+        onNewChat={() => createNewChat(appMode)}
+        onDeleteThread={(id: string) => {
+          if (authState === 'user') fetch(`${API_BASE_URL}/threads/${id}`, { method: 'DELETE' }).then(() => fetchThreads());
+          else {
+            const updated = threads.filter(t => t.id !== id);
+            setThreads(updated);
+            localStorage.setItem(GUEST_THREADS_KEY, JSON.stringify(updated));
+            localStorage.removeItem(getGuestMessagesKey(id));
+            if (currentThreadId === id) setCurrentThreadId(null);
+          }
+        }}
+        onCloseMobile={() => setIsSidebarOpen(false)}
+        appMode={appMode}
       />
+
+      <div className="flex-1 flex overflow-hidden flex-col h-full bg-[#050505] relative">
+        <header className="flex items-center justify-between px-3 md:px-6 py-2 md:py-4 border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-40">
+          <div className="flex items-center gap-2 md:gap-3">
+            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400">
+              <SidebarIcon size={18} />
+            </button>
+            <img src="/logo.png" alt="Logo" className="w-6 h-6 md:w-8 md:h-8 object-contain shrink-0" />
+            <h1 className="font-bold tracking-tight text-yellow-500 text-sm md:text-base uppercase truncate ml-1">DARKPIXELS AI</h1>
+          </div>
+          <div className="bg-gray-900/50 p-1 rounded-xl flex items-center border border-gray-800 scale-90 md:scale-100">
+            {['chat', 'canvas', 'image'].map((m) => (
+              <button
+                key={m}
+                onClick={() => switchMode(m as AppMode)}
+                className={`px-2.5 md:px-3 py-1.2 md:py-1.5 rounded-lg text-[9px] md:text-[10px] font-bold transition-all uppercase ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}`}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1 md:gap-2">
+            <button onClick={() => setIsSettingsOpen(true)} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-gray-400">
+              <Settings size={18} />
+            </button>
+            <button onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-red-500">
+              <LogOut size={18} />
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 overflow-y-auto p-3 md:p-6 scrollbar-thin scrollbar-thumb-gray-800 relative">
+          <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end pb-2">
+            {messages.length === 0 && (
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-700 space-y-4 opacity-50 grayscale animate-pulse">
+                <img src="/logo.png" alt="DarkPixels AI" className="w-16 h-16 opacity-20" />
+                <div className="text-center font-mono text-[10px] tracking-[0.4em] uppercase">System Ready / Awaiting Interaction</div>
+              </div>
+            )}
+            {messages.map(m => (
+              <MessageBubble
+                key={m.id}
+                message={m}
+                onPreview={setPreviewCode}
+                appMode={appMode}
+                onRetry={handleSend}
+              />
+            ))}
+            {isLoading && (
+              <div className="ml-4 text-[10px] animate-pulse text-yellow-500 font-mono uppercase tracking-widest flex items-center gap-2">
+                <Loader2 size={10} className="animate-spin" /> {loadingText}
+                <button onClick={handleStop} className="ml-2 p-1 bg-red-500/20 text-red-400 hover:text-red-300 rounded">
+                  <Square size={10} fill="currentColor" />
+                </button>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </main>
+
+        <footer className="p-2 md:p-4 border-t border-gray-800 bg-[#050505] z-40">
+          <div className={`max-w-3xl mx-auto relative flex flex-col gap-1.5 bg-gray-950/50 border rounded-2xl md:rounded-3xl p-1.5 md:p-2 transition-all group ${getModeColors(appMode).border}`}>
+            {pendingFile && (
+              <div className="flex items-center gap-3 p-2 bg-black/60 rounded-xl w-fit border border-gray-700 ml-1 mt-1">
+                {pendingFile.type === 'image' ? <img src={pendingFile.content} className="h-10 w-10 md:h-12 md:w-12 object-cover rounded-lg" /> : <FileText size={18} className="text-gray-400 mx-2" />}
+                <span className="text-[9px] md:text-[10px] text-gray-300 max-w-[80px] md:max-w-[100px] truncate">{pendingFile.name}</span>
+                <button onClick={() => setPendingFile(null)}><X size={12} /></button>
+              </div>
+            )}
+            <div className="flex items-end gap-1 relative px-1">
+              <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
+              <button onClick={() => fileInputRef.current?.click()} className="p-2 md:p-3 text-gray-500 hover:text-yellow-500">
+                <Paperclip size={18} />
+              </button>
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
+                placeholder="Interact..."
+                className="flex-1 bg-transparent border-none focus:ring-0 text-white placeholder-gray-700 text-sm md:text-base resize-none py-2.5 md:py-3 min-h-[40px] max-h-32"
+                rows={1}
+              />
+              <button
+                onClick={() => handleSend()}
+                disabled={isLoading}
+                className={`p-2 md:p-3 rounded-xl md:rounded-2xl transition-all ${input.trim() || pendingFile ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-gray-600'}`}
+              >
+                <Send size={18} />
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center justify-center gap-2 mt-2 md:mt-4 opacity-40 hover:opacity-100 transition-opacity duration-500 text-center px-4">
+            <img src="/logo.png" alt="DarkPixels AI Logo" className="w-3.5 h-3.5 grayscale shrink-0" />
+            <p className="text-[9px] md:text-[10px] text-gray-500 font-mono uppercase tracking-[0.1em] leading-relaxed">
+              <span className="font-bold text-gray-300">DARKPIXELS AI</span> can make mistakes.
+            </p>
+          </div>
+        </footer>
+
+        {previewCode && <CanvasPanel code={previewCode} onClose={() => setPreviewCode(null)} />}
+
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          user={user}
+          onLogin={() => handleGoogleLogin()}
+          onClearHistory={handleClearHistory}
+        />
+      </div>
     </div>
   );
 };
