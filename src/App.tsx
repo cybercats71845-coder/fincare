@@ -4,7 +4,7 @@ import {
   FileText, X,
   Download, Trash2,
   Code, Wind, MessageCircle, BrainCircuit,
-  Plus, Sidebar as SidebarIcon, User as UserIcon, LogOut, LogIn,
+  Plus, User as UserIcon, LogOut, LogIn,
   LayoutTemplate, Sparkles,
   Eye, FileCode, Layout, MessageSquareText, History,
   Palette, Loader2, AlertCircle, RefreshCw, Copy, UserCheck, Square
