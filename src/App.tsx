@@ -1113,36 +1113,57 @@ const DarkPixelsInner = () => {
       />
 
       <div className="flex-1 flex overflow-hidden flex-col h-full bg-[#050505] relative">
-        <header className="fixed top-0 left-0 right-0 md:relative flex items-center justify-between px-3 md:px-6 py-2 md:py-4 border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-50">
-          <div className="flex items-center gap-2 md:gap-3">
-            <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400">
-              <SidebarIcon size={18} />
-            </button>
-            <img src="/logo.png" alt="Logo" className="w-6 h-6 md:w-8 md:h-8 object-contain shrink-0" />
-            <h1 className="font-bold tracking-tight text-yellow-500 text-sm md:text-base uppercase truncate ml-1">DARKPIXELS AI</h1>
-          </div>
-          <div className="bg-gray-900/50 p-1 rounded-xl flex items-center border border-gray-800 scale-90 md:scale-100">
-            {['chat', 'canvas', 'image'].map((m) => (
-              <button
-                key={m}
-                onClick={() => switchMode(m as AppMode)}
-                className={`px-2.5 md:px-3 py-1.2 md:py-1.5 rounded-lg text-[9px] md:text-[10px] font-bold transition-all uppercase ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}`}
-              >
-                {m}
+        <header className="fixed top-0 left-0 right-0 md:relative flex flex-col md:flex-row items-center justify-between border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-50">
+          {/* Top Row: Brand & Actions */}
+          <div className="w-full flex items-center justify-between px-3 md:px-6 py-2 md:py-4">
+            <div className="flex items-center gap-2 md:gap-3">
+              <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 hover:bg-gray-800 rounded-lg text-gray-400">
+                <SidebarIcon size={18} />
               </button>
-            ))}
+              <img src="/logo.png" alt="Logo" className="w-6 h-6 md:w-8 md:h-8 object-contain shrink-0" />
+              <h1 className="font-bold tracking-tight text-yellow-500 text-sm md:text-base uppercase truncate ml-1">DARKPIXELS AI</h1>
+            </div>
+
+            {/* Desktop Navigation (Hidden on Mobile) */}
+            <div className="hidden md:flex bg-gray-900/50 p-1 rounded-xl items-center border border-gray-800">
+              {['chat', 'canvas', 'image'].map((m) => (
+                <button
+                  key={m}
+                  onClick={() => switchMode(m as AppMode)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1 md:gap-2">
+              <button onClick={() => setIsSettingsOpen(true)} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-gray-400">
+                <Settings size={18} />
+              </button>
+              <button onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-red-500">
+                <LogOut size={18} />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-1 md:gap-2">
-            <button onClick={() => setIsSettingsOpen(true)} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-gray-400">
-              <Settings size={18} />
-            </button>
-            <button onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-red-500">
-              <LogOut size={18} />
-            </button>
+
+          {/* Bottom Row: Mobile Navigation (Only visible on Mobile) */}
+          <div className="md:hidden w-full px-3 pb-2.5">
+            <div className="bg-gray-900/50 p-1 rounded-xl flex items-center border border-gray-800 w-full">
+              {['chat', 'canvas', 'image'].map((m) => (
+                <button
+                  key={m}
+                  onClick={() => switchMode(m as AppMode)}
+                  className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all uppercase ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-3 md:p-6 scrollbar-thin scrollbar-thumb-gray-800 relative pt-[60px] md:pt-3">
+        <main className="flex-1 overflow-y-auto p-3 md:p-6 scrollbar-thin scrollbar-thumb-gray-800 relative pt-[110px] md:pt-3">
           <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end pb-2">
             {messages.length === 0 && (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-700 space-y-4 opacity-50 grayscale animate-pulse">
