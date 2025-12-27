@@ -21,11 +21,14 @@ const pool = new Pool({
 });
 
 const getRazorpay = () => {
-    const key_id = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "rzp_live_RwgRxaFYuAuD6C";
-    const key_secret = process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET || "aoqQNbDmljzTp1Uepamts2vH";
+    const rawId = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "rzp_live_RwgRxaFYuAuD6C";
+    const rawSecret = process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET || "aoqQNbDmljzTp1Uepamts2vH";
+
+    const key_id = rawId ? rawId.trim() : null;
+    const key_secret = rawSecret ? rawSecret.trim() : null;
 
     if (!key_id || !key_secret) {
-        console.error('Razorpay keys missing:', { hasId: !!key_id, hasSecret: !!key_secret });
+        console.error('Razorpay keys missing or empty after trim', { hasId: !!key_id, hasSecret: !!key_secret });
         return null;
     }
     try {
@@ -225,15 +228,24 @@ app.post('/api/razorpay/verify', async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
     console.log('Verifying payment:', { razorpay_order_id, razorpay_payment_id });
     try {
-        const secret = process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET || "aoqQNbDmljzTp1Uepamts2vH";
+        const rawSecret = process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET || "aoqQNbDmljzTp1Uepamts2vH";
+        const secret = rawSecret ? rawSecret.trim() : "";
+
         if (!secret) {
-            console.error('Razorpay secret missing in environment');
+            console.error('Razorpay secret missing for verification');
             return res.status(500).json({ error: 'Razorpay configuration error' });
         }
 
+        const data = razorpay_order_id + "|" + razorpay_payment_id;
         const hmac = crypto.createHmac('sha256', secret);
-        hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
+        hmac.update(data);
         const generated_signature = hmac.digest('hex');
+
+        console.log('Signature Check:', {
+            matches: generated_signature === razorpay_signature,
+            received: razorpay_signature?.slice(0, 5) + '...',
+            calculated: generated_signature?.slice(0, 5) + '...'
+        });
 
         if (generated_signature === razorpay_signature) {
             console.log('Payment verified successfully');
