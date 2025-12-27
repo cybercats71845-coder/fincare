@@ -878,17 +878,30 @@ const PricingModal = ({ isOpen, onClose, user }: any) => {
         image: "/logo.png",
         order_id: order.id,
         handler: async function (response: any) {
-          const verifyRes = await fetch(`${API_BASE_URL}/razorpay/verify`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(response),
-          });
-          const result = await verifyRes.json();
-          if (result.status === 'success') {
-            alert("Payment successful! Your plan will be updated soon.");
-            onClose();
-          } else {
-            alert("Payment verification failed.");
+          try {
+            const verifyRes = await fetch(`${API_BASE_URL}/razorpay/verify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(response),
+            });
+
+            if (!verifyRes.ok) {
+              const errorText = await verifyRes.text();
+              console.error("Verification Server Error:", errorText);
+              alert("Server Error: Payment was successful but verification failed. Please contact support.");
+              return;
+            }
+
+            const result = await verifyRes.json();
+            if (result.status === 'success') {
+              alert("Payment successful! Your plan will be updated soon.");
+              onClose();
+            } else {
+              alert("Payment verification failed: " + (result.message || "Unknown error"));
+            }
+          } catch (e) {
+            console.error("Verification Exception:", e);
+            alert("An error occurred during payment verification.");
           }
         },
         prefill: {
