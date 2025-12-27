@@ -2,6 +2,7 @@ import pg from 'pg';
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
+import Razorpay from 'razorpay';
 
 dotenv.config();
 
@@ -16,6 +17,11 @@ const pool = new Pool({
     ssl: {
         rejectUnauthorized: false,
     },
+});
+
+const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 const app = express();
@@ -174,6 +180,38 @@ app.post('/api/messages', async (req, res) => {
         res.json(result.rows[0]);
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// --- Razorpay Endpoints ---
+
+app.post('/api/razorpay/order', async (req, res) => {
+    const { amount, currency = 'INR' } = req.body;
+    try {
+        const options = {
+            amount: amount * 100, // amount in smallest currency unit (paise)
+            currency,
+            receipt: `receipt_${Date.now()}`,
+        };
+        const order = await razorpay.orders.create(options);
+        res.json(order);
+    } catch (err) {
+        console.error('Razorpay Order Error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/razorpay/verify', async (req, res) => {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    const crypto = await import('crypto');
+    const hmac = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
+    hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
+    const generated_signature = hmac.digest('hex');
+
+    if (generated_signature === razorpay_signature) {
+        res.json({ status: 'success', message: 'Payment verified successfully' });
+    } else {
+        res.status(400).json({ status: 'failure', message: 'Invalid signature' });
     }
 });
 

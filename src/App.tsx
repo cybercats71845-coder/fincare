@@ -7,7 +7,8 @@ import {
   Plus, User as UserIcon, LogOut, LogIn,
   LayoutTemplate, Sparkles,
   Eye, FileCode, Layout, MessageSquareText, History,
-  Palette, Loader2, AlertCircle, RefreshCw, Copy, UserCheck, Square
+  Palette, Loader2, AlertCircle, RefreshCw, Copy, UserCheck, Square,
+  Zap
 } from 'lucide-react';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
@@ -61,6 +62,7 @@ const IMAGE_MODEL_ID = getEnv("REACT_APP_IMAGE_MODEL_ID", "pollinations");
 const API_BASE_URL = '/api';
 
 const GOOGLE_CLIENT_ID = getEnv("VITE_GOOGLE_CLIENT_ID", "");
+const RAZORPAY_KEY_ID = getEnv("VITE_RAZORPAY_KEY_ID", "rzp_live_RwgRxaFYuAuD6C");
 
 // ==================================================================================
 
@@ -790,6 +792,192 @@ const SettingsModal = ({ isOpen, onClose, user, onLogin, onClearHistory }: any) 
   );
 };
 
+const PricingModal = ({ isOpen, onClose, user }: any) => {
+  if (!isOpen) return null;
+
+  const plans = [
+    {
+      name: "Basic Plan",
+      price: "250",
+      description: "Do more with smarter AI",
+      features: [
+        "Go deep on harder questions",
+        "Chat longer and upload more content",
+        "Make realistic images for your projects",
+        "Store more context for smarter replies",
+        "Get help with planning and tasks",
+        "Explore projects, tasks, and custom GPTs"
+      ],
+      buttonText: "Get Basic",
+      color: "border-gray-700",
+      bg: "bg-[#111]",
+      priceId: "basic"
+    },
+    {
+      name: "Plus",
+      price: "500",
+      description: "Unlock the full experience",
+      features: [
+        "Solve complex problems",
+        "Have long chats over multiple sessions",
+        "Create more images, faster",
+        "Remember goals and past conversations",
+        "Plan travel and tasks with agent mode",
+        "Organize projects and customize GPTs",
+        "Produce and share videos on Sora",
+        "Write code and build apps with Codex"
+      ],
+      buttonText: "Get Plus",
+      color: "border-gray-500",
+      bg: "bg-[#111]",
+      premium: true,
+      priceId: "plus"
+    },
+    {
+      name: "Pro",
+      price: "999",
+      description: "Maximize your productivity",
+      features: [
+        "Master advanced tasks and topics",
+        "Tackle big projects with unlimited messages",
+        "Create high-quality images at any scale",
+        "Keep full context with maximum memory",
+        "Run research and plan tasks with agents",
+        "Scale your projects and automate workflows",
+        "Expand your limits with Sora video creation",
+        "Deploy code faster with Codex",
+        "Get early access to experimental features"
+      ],
+      buttonText: "Get Pro",
+      color: "border-yellow-500/50",
+      bg: "bg-[#111]",
+      priceId: "pro"
+    }
+  ];
+
+  const handlePayment = async (plan: any) => {
+    if (!user) {
+      alert("Please sign in to upgrade.");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/razorpay/order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: parseInt(plan.price), currency: 'INR' }),
+      });
+      const order = await response.json();
+
+      const options = {
+        key: RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: "DarkPixels AI",
+        description: `${plan.name} Subscription`,
+        image: "/logo.png",
+        order_id: order.id,
+        handler: async function (response: any) {
+          const verifyRes = await fetch(`${API_BASE_URL}/razorpay/verify`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(response),
+          });
+          const result = await verifyRes.json();
+          if (result.status === 'success') {
+            alert("Payment successful! Your plan will be updated soon.");
+            onClose();
+          } else {
+            alert("Payment verification failed.");
+          }
+        },
+        prefill: {
+          name: user.displayName,
+          email: user.email,
+        },
+        theme: {
+          color: "#EAB308",
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      console.error("Payment error:", err);
+      alert("Failed to initiate payment. Please try again.");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 overflow-y-auto">
+      <div className="w-full max-w-6xl relative animate-in fade-in zoom-in duration-300">
+        <button
+          onClick={onClose}
+          className="absolute -top-12 right-0 md:-right-8 text-gray-400 hover:text-white transition-colors"
+        >
+          <X size={32} />
+        </button>
+
+        <div className="text-center mb-10">
+          <h2 className="text-4xl font-black text-white mb-4 tracking-tight">Upgrade your plan</h2>
+          <p className="text-gray-400 max-w-lg mx-auto">Get access to more advanced models, faster generations, and exclusive features with our premium tiers.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {plans.map((plan) => (
+            <div
+              key={plan.name}
+              className={`flex flex-col p-8 rounded-[2rem] border ${plan.color} ${plan.bg} relative overflow-hidden group hover:scale-[1.02] transition-all duration-500`}
+            >
+              {plan.premium && (
+                <div className="absolute top-0 right-0 p-4">
+                  <div className="bg-yellow-500 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-widest">Best Value</div>
+                </div>
+              )}
+
+              <div className="mb-8">
+                <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
+                <div className="flex items-baseline gap-1 mt-4">
+                  <span className="text-gray-400 text-lg">₹</span>
+                  <span className="text-5xl font-black text-white">{plan.price}</span>
+                  <span className="text-gray-500 text-sm">/ month</span>
+                </div>
+                <p className="text-gray-400 text-sm mt-4 font-medium">{plan.description}</p>
+              </div>
+
+              <button
+                onClick={() => handlePayment(plan)}
+                className={`w-full py-4 rounded-2xl font-bold transition-all mb-8 flex items-center justify-center gap-2
+                  ${plan.name === 'Pro'
+                    ? 'bg-yellow-500 text-black hover:bg-yellow-400 shadow-lg shadow-yellow-900/20'
+                    : 'bg-white text-black hover:bg-gray-100'}`}
+              >
+                <Zap size={16} fill="currentColor" />
+                {plan.buttonText}
+              </button>
+
+              <div className="space-y-4 flex-1">
+                {plan.features.map((feature, i) => (
+                  <div key={i} className="flex gap-3 text-sm text-gray-300 leading-tight">
+                    <div className="shrink-0 mt-0.5 text-yellow-500/80">
+                      <Sparkles size={14} />
+                    </div>
+                    <span>{feature}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-gray-800">
+                <p className="text-[10px] text-gray-600 uppercase tracking-widest text-center">Limits apply · Terms of service</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Main App ---
 
 const DarkPixelsInner = () => {
@@ -804,6 +992,7 @@ const DarkPixelsInner = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
   const [appMode, setAppMode] = useState<AppMode>('chat');
+  const [isPricingOpen, setIsPricingOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -1113,7 +1302,10 @@ const DarkPixelsInner = () => {
       />
 
       <div className="flex-1 flex overflow-hidden flex-col h-full bg-[#050505] relative">
-        <header className="fixed top-0 left-0 right-0 md:relative flex flex-col md:flex-row items-center justify-between border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-50">
+        <div className="bg-yellow-500 text-black py-1 px-4 text-[10px] font-bold text-center tracking-[0.2em] uppercase z-[60] relative cursor-pointer hover:bg-yellow-400 transition-colors" onClick={() => setIsPricingOpen(true)}>
+          Special Offer: Upgrade to Pro and save up to 50% / Limited Time Only
+        </div>
+        <header className="fixed top-[20px] md:top-0 left-0 right-0 md:static flex flex-col md:flex-row items-center justify-between border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-50">
           {/* Top Row: Brand & Actions */}
           <div className="w-full flex items-center justify-between px-3 md:px-6 py-2 md:py-4">
             <div className="flex items-center gap-2 md:gap-3">
@@ -1135,6 +1327,13 @@ const DarkPixelsInner = () => {
             </div>
 
             <div className="flex items-center gap-1 md:gap-2">
+              <button
+                onClick={() => setIsPricingOpen(true)}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-yellow-400 transition-all mr-2 shadow-lg shadow-yellow-900/40"
+              >
+                <Zap size={12} fill="currentColor" />
+                Upgrade to Pro
+              </button>
               <button onClick={() => setIsSettingsOpen(true)} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-gray-400">
                 <Settings size={18} />
               </button>
@@ -1158,6 +1357,14 @@ const DarkPixelsInner = () => {
               ))}
             </div>
 
+            <button
+              onClick={() => setIsPricingOpen(true)}
+              className="w-full py-2.5 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all mt-1"
+            >
+              <Zap size={12} fill="currentColor" />
+              UPGRADE TO PRO
+            </button>
+
             {/* 3rd Row: Chat History Button */}
             <div className="flex justify-start pb-1">
               <button
@@ -1171,7 +1378,7 @@ const DarkPixelsInner = () => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-3 md:p-6 scrollbar-thin scrollbar-thumb-gray-800 relative pt-[155px] md:pt-3">
+        <main className="flex-1 overflow-y-auto p-3 md:p-6 scrollbar-thin scrollbar-thumb-gray-800 relative pt-[175px] md:pt-3">
           <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end pb-2">
             {messages.length === 0 && (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-700 space-y-4 opacity-50 grayscale animate-pulse">
@@ -1247,6 +1454,12 @@ const DarkPixelsInner = () => {
           user={user}
           onLogin={() => handleGoogleLogin()}
           onClearHistory={handleClearHistory}
+        />
+
+        <PricingModal
+          isOpen={isPricingOpen}
+          onClose={() => setIsPricingOpen(false)}
+          user={user}
         />
       </div>
     </div>
