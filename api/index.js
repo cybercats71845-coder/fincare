@@ -57,6 +57,8 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL,
     display_name VARCHAR(255),
     photo_url TEXT,
+    plan VARCHAR(50) DEFAULT 'Free',
+    plan_updated_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -89,6 +91,9 @@ app.post('/api/init-db', async (req, res) => {
         await client.query(SCHEMA_SQL);
         // Migration: Add type if not exists
         await client.query(`ALTER TABLE threads ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'chat'`);
+        // Migration: Add plan if not exists
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan VARCHAR(50) DEFAULT 'Free'`);
+        await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_updated_at TIMESTAMP WITH TIME ZONE`);
         client.release();
         res.json({ status: 'success', message: 'Database initialized and migrated' });
     } catch (err) {
@@ -103,17 +108,18 @@ app.post('/api/init-db', async (req, res) => {
 app.post('/api/users', async (req, res) => {
     const { uid, email, displayName, photoURL } = req.body;
     try {
-        await pool.query(
+        const result = await pool.query(
             `INSERT INTO users (id, email, display_name, photo_url, last_login)
              VALUES ($1, $2, $3, $4, NOW())
              ON CONFLICT (id) DO UPDATE 
              SET email = EXCLUDED.email, 
                  display_name = EXCLUDED.display_name, 
                  photo_url = EXCLUDED.photo_url,
-                 last_login = NOW()`,
+                 last_login = NOW()
+             RETURNING *`,
             [uid, email, displayName, photoURL]
         );
-        res.json({ status: 'success' });
+        res.json(result.rows[0]);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -249,7 +255,17 @@ app.post('/api/razorpay/verify', async (req, res) => {
 
         if (generated_signature === razorpay_signature) {
             console.log('Payment verified successfully');
-            res.json({ status: 'success', message: 'Payment verified successfully' });
+
+            // Update user plan
+            const { userId, plan } = req.body;
+            if (userId && plan) {
+                await pool.query(
+                    'UPDATE users SET plan = $1, plan_updated_at = NOW() WHERE id = $2',
+                    [plan, userId]
+                );
+            }
+
+            res.json({ status: 'success', message: 'Payment verified successfully', plan });
         } else {
             console.warn('Invalid signature detected');
             res.status(400).json({ status: 'failure', message: 'Invalid signature' });

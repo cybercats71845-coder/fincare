@@ -103,6 +103,7 @@ interface User {
   email: string;
   displayName: string;
   photoURL?: string;
+  plan?: string;
 }
 
 interface Message {
@@ -792,14 +793,24 @@ const SettingsModal = ({ isOpen, onClose, user, onLogin, onClearHistory }: any) 
   );
 };
 
-const PricingModal = ({ isOpen, onClose, user }: any) => {
+const PricingModal = ({ isOpen, onClose, user, onPlanUpdate }: any) => {
   if (!isOpen) return null;
+
+  const planLevels: any = {
+    'Free': 0,
+    'Basic Plan': 1,
+    'Plus': 2,
+    'Pro': 3
+  };
+
+  const currentLevel = planLevels[user?.plan || 'Free'] || 0;
 
   const plans = [
     {
       name: "Basic Plan",
       price: "5",
       description: "Do more with smarter AI",
+      level: 1,
       features: [
         "Go deep on harder questions",
         "Chat longer and upload more content",
@@ -817,6 +828,7 @@ const PricingModal = ({ isOpen, onClose, user }: any) => {
       name: "Plus",
       price: "500",
       description: "Unlock the full experience",
+      level: 2,
       features: [
         "Solve complex problems",
         "Have long chats over multiple sessions",
@@ -837,6 +849,7 @@ const PricingModal = ({ isOpen, onClose, user }: any) => {
       name: "Pro",
       price: "999",
       description: "Maximize your productivity",
+      level: 3,
       features: [
         "Master advanced tasks and topics",
         "Tackle big projects with unlimited messages",
@@ -854,6 +867,8 @@ const PricingModal = ({ isOpen, onClose, user }: any) => {
       priceId: "pro"
     }
   ];
+
+  const filteredPlans = plans.filter(p => p.level > currentLevel);
 
   const handlePayment = async (plan: any) => {
     if (!user) {
@@ -882,7 +897,11 @@ const PricingModal = ({ isOpen, onClose, user }: any) => {
             const verifyRes = await fetch(`${API_BASE_URL}/razorpay/verify`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(response),
+              body: JSON.stringify({
+                ...response,
+                userId: user.uid,
+                plan: plan.name
+              }),
             });
 
             if (!verifyRes.ok) {
@@ -894,7 +913,8 @@ const PricingModal = ({ isOpen, onClose, user }: any) => {
 
             const result = await verifyRes.json();
             if (result.status === 'success') {
-              alert("Payment successful! Your plan will be updated soon.");
+              alert(`Payment successful! Welcome to the ${plan.name} tier.`);
+              onPlanUpdate(plan.name);
               onClose();
             } else {
               alert("Payment verification failed: " + (result.message || "Unknown error"));
@@ -936,8 +956,8 @@ const PricingModal = ({ isOpen, onClose, user }: any) => {
           <p className="text-gray-400 max-w-lg mx-auto">Get access to more advanced models, faster generations, and exclusive features with our premium tiers.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {plans.map((plan) => (
+        <div className={`grid grid-cols-1 md:grid-cols-${filteredPlans.length} gap-6 max-w-4xl mx-auto`}>
+          {filteredPlans.map((plan) => (
             <div
               key={plan.name}
               className={`flex flex-col p-8 rounded-[2rem] border ${plan.color} ${plan.bg} relative overflow-hidden group hover:scale-[1.02] transition-all duration-500`}
@@ -985,6 +1005,13 @@ const PricingModal = ({ isOpen, onClose, user }: any) => {
               </div>
             </div>
           ))}
+          {filteredPlans.length === 0 && (
+            <div className="col-span-full py-12 text-center bg-yellow-500/10 border border-yellow-500/20 rounded-3xl">
+              <Sparkles size={48} className="mx-auto text-yellow-500 mb-4" />
+              <h3 className="text-xl font-bold text-white">You're on the Pro Plan!</h3>
+              <p className="text-gray-400 mt-2">You already have access to all premium features.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1028,6 +1055,21 @@ const DarkPixelsInner = () => {
       const u = JSON.parse(saved);
       setUser(u);
       setAuthState(u.uid.startsWith('guest_') ? 'guest' : 'user');
+
+      // Refresh user data from server to get latest plan
+      if (!u.uid.startsWith('guest_')) {
+        safeFetch(`${API_BASE_URL}/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: u.uid, email: u.email, displayName: u.displayName, photoURL: u.photoURL })
+        }).then(updated => {
+          if (updated) {
+            const final = { ...u, plan: updated.plan || 'Free' };
+            setUser(final);
+            localStorage.setItem('dp_user', JSON.stringify(final));
+          }
+        }).catch(console.error);
+      }
     }
     else { setAuthState('auth'); }
   }, []);
@@ -1082,8 +1124,16 @@ const DarkPixelsInner = () => {
       const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: `Bearer ${tokenResponse.access_token}` } });
       const info = await res.json();
       const u = { uid: info.sub, email: info.email, displayName: info.name, photoURL: info.picture };
-      setUser(u); setAuthState('user'); localStorage.setItem('dp_user', JSON.stringify(u));
-      await safeFetch(`${API_BASE_URL}/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(u) });
+      const savedUser = await safeFetch(`${API_BASE_URL}/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(u) });
+      if (savedUser) {
+        const finalUser = {
+          ...u,
+          plan: savedUser.plan || 'Free'
+        };
+        setUser(finalUser);
+        setAuthState('user');
+        localStorage.setItem('dp_user', JSON.stringify(finalUser));
+      }
     }
   });
 
@@ -1340,13 +1390,21 @@ const DarkPixelsInner = () => {
             </div>
 
             <div className="flex items-center gap-1 md:gap-2">
-              <button
-                onClick={() => setIsPricingOpen(true)}
-                className="hidden sm:flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-yellow-400 transition-all mr-2 shadow-lg shadow-yellow-900/40"
-              >
-                <Zap size={12} fill="currentColor" />
-                Upgrade to Pro
-              </button>
+              {user?.plan !== 'Pro' && (
+                <button
+                  onClick={() => setIsPricingOpen(true)}
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-yellow-400 transition-all mr-2 shadow-lg shadow-yellow-900/40"
+                >
+                  <Zap size={12} fill="currentColor" />
+                  {user?.plan && user.plan !== 'Free' ? `UPGRADE FROM ${user.plan}` : 'Upgrade to Pro'}
+                </button>
+              )}
+              {user?.plan === 'Pro' && (
+                <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gray-900 text-yellow-500 border border-yellow-500/20 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all mr-2">
+                  <Sparkles size={12} />
+                  Pro Member
+                </div>
+              )}
               <button onClick={() => setIsSettingsOpen(true)} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-gray-400">
                 <Settings size={18} />
               </button>
@@ -1370,13 +1428,15 @@ const DarkPixelsInner = () => {
               ))}
             </div>
 
-            <button
-              onClick={() => setIsPricingOpen(true)}
-              className="w-full py-2.5 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all mt-1"
-            >
-              <Zap size={12} fill="currentColor" />
-              UPGRADE TO PRO
-            </button>
+            {user?.plan !== 'Pro' && (
+              <button
+                onClick={() => setIsPricingOpen(true)}
+                className="w-full py-2.5 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all mt-1"
+              >
+                <Zap size={12} fill="currentColor" />
+                {user?.plan && user.plan !== 'Free' ? `UPGRADE FROM ${user.plan}` : 'UPGRADE TO PRO'}
+              </button>
+            )}
 
             {/* 3rd Row: Chat History Button */}
             <div className="flex justify-start pb-1">
@@ -1473,6 +1533,13 @@ const DarkPixelsInner = () => {
           isOpen={isPricingOpen}
           onClose={() => setIsPricingOpen(false)}
           user={user}
+          onPlanUpdate={(newPlan: string) => {
+            if (user) {
+              const updatedUser = { ...user, plan: newPlan };
+              setUser(updatedUser);
+              localStorage.setItem('dp_user', JSON.stringify(updatedUser));
+            }
+          }}
         />
       </div>
     </div>
