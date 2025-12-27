@@ -28,14 +28,17 @@ const pool = new Pool({
 });
 
 const getRazorpay = () => {
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    const key_id = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID;
+    const key_secret = process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET;
+
+    if (!key_id || !key_secret) {
         return null;
     }
     try {
         const RazorpayClass = Razorpay.default || Razorpay;
         return new RazorpayClass({
-            key_id: process.env.RAZORPAY_KEY_ID,
-            key_secret: process.env.RAZORPAY_KEY_SECRET,
+            key_id: key_id,
+            key_secret: key_secret,
         });
     } catch (e) {
         console.error("Razorpay Init Error:", e);
@@ -227,7 +230,7 @@ app.post('/api/razorpay/order', async (req, res) => {
 app.post('/api/razorpay/verify', async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
     try {
-        const secret = process.env.RAZORPAY_KEY_SECRET;
+        const secret = process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET;
         if (!secret) return res.status(500).json({ error: 'Razorpay secret missing' });
 
         const hmac = crypto.createHmac('sha256', secret);
