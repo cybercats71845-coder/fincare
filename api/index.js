@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import Razorpay from 'razorpay';
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -19,10 +20,22 @@ const pool = new Pool({
     },
 });
 
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+const getRazorpay = () => {
+    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+        return null;
+    }
+    try {
+        // Handle potential different export styles of razorpay package
+        const RazorpayClass = Razorpay.default || Razorpay;
+        return new RazorpayClass({
+            key_id: process.env.RAZORPAY_KEY_ID,
+            key_secret: process.env.RAZORPAY_KEY_SECRET,
+        });
+    } catch (e) {
+        console.error("Razorpay Init Error:", e);
+        return null;
+    }
+};
 
 const app = express();
 
@@ -188,6 +201,10 @@ app.post('/api/messages', async (req, res) => {
 app.post('/api/razorpay/order', async (req, res) => {
     const { amount, currency = 'INR' } = req.body;
     try {
+        const razorpay = getRazorpay();
+        if (!razorpay) {
+            return res.status(500).json({ error: 'Razorpay not configured on server' });
+        }
         const options = {
             amount: amount * 100, // amount in smallest currency unit (paise)
             currency,
@@ -203,15 +220,21 @@ app.post('/api/razorpay/order', async (req, res) => {
 
 app.post('/api/razorpay/verify', async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-    const crypto = await import('crypto');
-    const hmac = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
-    hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
-    const generated_signature = hmac.digest('hex');
+    try {
+        const secret = process.env.RAZORPAY_KEY_SECRET;
+        if (!secret) return res.status(500).json({ error: 'Razorpay secret missing' });
 
-    if (generated_signature === razorpay_signature) {
-        res.json({ status: 'success', message: 'Payment verified successfully' });
-    } else {
-        res.status(400).json({ status: 'failure', message: 'Invalid signature' });
+        const hmac = crypto.createHmac('sha256', secret);
+        hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
+        const generated_signature = hmac.digest('hex');
+
+        if (generated_signature === razorpay_signature) {
+            res.json({ status: 'success', message: 'Payment verified successfully' });
+        } else {
+            res.status(400).json({ status: 'failure', message: 'Invalid signature' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
