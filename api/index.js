@@ -21,8 +21,8 @@ const pool = new Pool({
 });
 
 const getRazorpay = () => {
-    const key_id = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID;
-    const key_secret = process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET;
+    const key_id = process.env.RAZORPAY_KEY_ID || process.env.VITE_RAZORPAY_KEY_ID || "rzp_live_RwgRxaFYuAuD6C";
+    const key_secret = process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET || "aoqQNbDmljzTp1Uepamts2vH";
 
     if (!key_id || !key_secret) {
         console.error('Razorpay keys missing:', { hasId: !!key_id, hasSecret: !!key_secret });
@@ -225,7 +225,7 @@ app.post('/api/razorpay/verify', async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
     console.log('Verifying payment:', { razorpay_order_id, razorpay_payment_id });
     try {
-        const secret = process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET;
+        const secret = process.env.RAZORPAY_KEY_SECRET || process.env.VITE_RAZORPAY_KEY_SECRET || "aoqQNbDmljzTp1Uepamts2vH";
         if (!secret) {
             console.error('Razorpay secret missing in environment');
             return res.status(500).json({ error: 'Razorpay configuration error' });
