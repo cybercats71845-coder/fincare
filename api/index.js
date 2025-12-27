@@ -220,20 +220,27 @@ app.post('/api/razorpay/order', async (req, res) => {
 
 app.post('/api/razorpay/verify', async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+    console.log('Verifying payment:', { razorpay_order_id, razorpay_payment_id });
     try {
         const secret = process.env.RAZORPAY_KEY_SECRET;
-        if (!secret) return res.status(500).json({ error: 'Razorpay secret missing' });
+        if (!secret) {
+            console.error('Razorpay secret missing in environment');
+            return res.status(500).json({ error: 'Razorpay configuration error' });
+        }
 
         const hmac = crypto.createHmac('sha256', secret);
-        hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
+        hmac.update(`${razorpay_order_id}|${razorpay_payment_id}`);
         const generated_signature = hmac.digest('hex');
 
         if (generated_signature === razorpay_signature) {
+            console.log('Payment verified successfully');
             res.json({ status: 'success', message: 'Payment verified successfully' });
         } else {
+            console.warn('Invalid signature detected');
             res.status(400).json({ status: 'failure', message: 'Invalid signature' });
         }
     } catch (err) {
+        console.error('Razorpay Verify Error:', err);
         res.status(500).json({ error: err.message });
     }
 });
