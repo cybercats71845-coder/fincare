@@ -798,7 +798,7 @@ const PricingModal = ({ isOpen, onClose, user }: any) => {
   const plans = [
     {
       name: "Basic Plan",
-      price: "250",
+      price: "5",
       description: "Do more with smarter AI",
       features: [
         "Go deep on harder questions",
