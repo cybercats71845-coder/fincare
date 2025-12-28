@@ -225,7 +225,7 @@ const CanvasPanel = ({ code, onClose }: { code: string, onClose: () => void }) =
   const [view, setView] = useState<'preview' | 'code'>('preview');
 
   return (
-    <div className="fixed inset-0 z-50 md:static md:inset-auto md:flex-1 md:flex md:flex-col md:h-full bg-[#0a0a0a] border-l border-gray-800 animate-in slide-in-from-right duration-300 flex flex-col">
+    <div className="fixed inset-0 z-50 lg:static lg:inset-auto lg:w-[45%] lg:flex lg:flex-col lg:h-full bg-[#0a0a0a] border-l border-gray-800 animate-in slide-in-from-right duration-300 flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-[#0a0a0a]">
         <div className="flex items-center gap-3">
           <div className="p-1.5 bg-yellow-500/20 rounded-md">
@@ -1591,7 +1591,6 @@ const DarkPixelsInner = () => {
           </div>
         </footer>
 
-        {previewCode && <CanvasPanel code={previewCode} onClose={() => setPreviewCode(null)} />}
 
         <SettingsModal
           isOpen={isSettingsOpen}
@@ -1613,8 +1612,9 @@ const DarkPixelsInner = () => {
             }
           }}
         />
-      </div >
-    </div >
+      </div>
+      {previewCode && <CanvasPanel code={previewCode} onClose={() => setPreviewCode(null)} />}
+    </div>
   );
 };
 
