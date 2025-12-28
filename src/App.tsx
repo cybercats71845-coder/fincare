@@ -718,8 +718,26 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
         );
       }
       return (
-        <div key={index} className="whitespace-pre-wrap relative group">
-          {cleanAIResponse(part)}
+        <div key={index} className="whitespace-pre-wrap relative group space-y-2">
+          {cleanAIResponse(part).split('\n').map((line, i) => {
+            // Convert ### headers to point dots
+            const isBullet = line.trim().startsWith('#');
+            const cleanLine = line.replace(/^#+\s*/, isBullet ? '• ' : '');
+
+            // Split by bold markers
+            const segments = cleanLine.split(/(\*\*.*?\*\*)/g);
+
+            return (
+              <div key={i} className={`${isBullet ? 'pl-2 text-yellow-500/90 font-semibold' : ''} leading-relaxed`}>
+                {segments.map((seg, j) => {
+                  if (seg.startsWith('**') && seg.endsWith('**')) {
+                    return <strong key={j} className="text-yellow-500 font-extrabold px-0.5">{seg.slice(2, -2)}</strong>;
+                  }
+                  return seg;
+                })}
+              </div>
+            );
+          })}
           {part.trim().length > 0 && !isUser && (
             <button
               onClick={() => navigator.clipboard.writeText(part)}
