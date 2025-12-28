@@ -1417,7 +1417,7 @@ const DarkPixelsInner = () => {
                   className="hidden sm:flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-yellow-400 transition-all mr-2 shadow-lg shadow-yellow-900/40"
                 >
                   <LogIn size={12} fill="currentColor" />
-                  Sign In to Upgrade
+                  Sign In
                 </button>
               ) : user?.plan && user.plan !== 'Free' ? (
                 <div className="hidden sm:flex flex-col items-end gap-1">
@@ -1476,7 +1476,7 @@ const DarkPixelsInner = () => {
                   className="w-full py-2.5 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all mt-1"
                 >
                   <LogIn size={12} fill="currentColor" />
-                  SIGN IN TO UPGRADE
+                  SIGN IN
                 </button>
               ) : user?.plan && user.plan !== 'Free' ? (
                 <div className="flex flex-col gap-2">
