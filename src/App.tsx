@@ -1388,7 +1388,7 @@ const DarkPixelsInner = () => {
             Try the Basic Plan at just ₹19 / Limited Time Only
           </div>
         )}
-        <header className="fixed top-[20px] md:top-0 left-0 right-0 md:static flex flex-col md:flex-row items-center justify-between border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-50">
+        <header className="md:static flex flex-col md:flex-row items-center justify-between border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-50">
           {/* Top Row: Brand, Mobile Plan, & Actions */}
           <div className="w-full flex items-center justify-between px-3 md:px-6 py-2 md:py-4 gap-1">
             <div className="flex items-center gap-1.5 shrink-0">
@@ -1402,7 +1402,7 @@ const DarkPixelsInner = () => {
                 </button>
               )}
               <img src="/logo.png" alt="Logo" className="w-6 h-6 md:w-8 md:h-8 object-contain shrink-0" />
-              <h1 className="font-black tracking-tighter text-yellow-500 text-[10px] md:text-base uppercase truncate max-w-[75px] sm:max-w-none">DARKPIXELS AI</h1>
+              <h1 className="font-black tracking-tighter text-yellow-500 text-xs md:text-xl uppercase truncate max-w-[100px] sm:max-w-none">DARKPIXELS AI</h1>
             </div>
 
             {/* Desktop Navigation (Center) */}
@@ -1523,7 +1523,7 @@ const DarkPixelsInner = () => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-3 md:p-6 scrollbar-thin scrollbar-thumb-gray-800 relative pt-[175px] md:pt-3">
+        <main className="flex-1 overflow-y-auto p-3 md:p-6 scrollbar-thin scrollbar-thumb-gray-800 relative">
           <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end pb-2">
             {messages.length === 0 && (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-700 space-y-4 opacity-50 grayscale animate-pulse">
