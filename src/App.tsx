@@ -741,13 +741,13 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
                 {isBullet && (
                   <span className="text-yellow-500 font-black shrink-0 mt-[7px] text-[8px] opacity-60">●</span>
                 )}
-                <div className={`flex-1 ${isBullet ? 'text-white font-semibold' : 'text-gray-300'}`}>
+                <div className={`flex-1 ${isUser ? 'text-black' : (isBullet ? 'text-white font-semibold' : 'text-gray-300')}`}>
                   {segments.map((seg, j) => {
                     // Match segments that are wrapped in 2 or 3 asterisks/underscores
                     const match = seg.match(/^(\*{2,3}|_{2})(.*?)\1$/);
                     if (match) {
                       return (
-                        <strong key={j} className="text-white font-black px-0.5 inline">
+                        <strong key={j} className={`${isUser ? 'text-black font-black' : 'text-white font-black'} px-0.5 inline`}>
                           {match[2]}
                         </strong>
                       );
