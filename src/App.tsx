@@ -1390,7 +1390,7 @@ const DarkPixelsInner = () => {
     if (!activeId) {
       // Lazy create thread
       const type = appMode === 'canvas' ? 'dev' : (appMode === 'image' ? 'image' : 'chat');
-      const title = text.slice(0, 30) || 'New Chat';
+      const title = 'New Chat';
 
       if (authState === 'user' && user) {
         const newT = await safeFetch(`${API_BASE_URL}/threads`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: user.uid, title, type }) });
@@ -1493,7 +1493,7 @@ const DarkPixelsInner = () => {
       setMessages(prev => [...prev, aiMsg]);
       if (activeId) {
         saveMsg(aiMsg, activeId);
-        if (isNewConversation || messages.length === 1) {
+        if (messages.length === 2) {
           generateSmartTitle(activeId, text, aiText);
         }
       }
