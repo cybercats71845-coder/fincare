@@ -8,7 +8,7 @@ import {
   LayoutTemplate, Sparkles,
   Eye, FileCode, Layout, MessageSquareText, History,
   Palette, Loader2, AlertCircle, RefreshCw, Copy, UserCheck, Square,
-  Zap
+  Zap, Menu
 } from 'lucide-react';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
@@ -1384,7 +1384,14 @@ const DarkPixelsInner = () => {
         <header className="fixed top-[20px] md:top-0 left-0 right-0 md:static flex flex-col md:flex-row items-center justify-between border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-50">
           {/* Top Row: Brand & Actions */}
           <div className="w-full flex items-center justify-between px-3 md:px-6 py-2 md:py-4">
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-1 md:gap-3">
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 -ml-2 transition-colors"
+                title="Toggle Sidebar"
+              >
+                <Menu size={20} />
+              </button>
               <img src="/logo.png" alt="Logo" className="w-10 h-10 md:w-8 md:h-8 object-contain shrink-0" />
               <h1 className="font-bold tracking-tight text-yellow-500 text-xl md:text-base uppercase truncate">DARKPIXELS AI</h1>
             </div>
@@ -1403,6 +1410,14 @@ const DarkPixelsInner = () => {
             </div>
 
             <div className="flex items-center gap-1 md:gap-4">
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-900 border border-gray-800 hover:bg-gray-800 rounded-xl text-[10px] font-bold text-gray-400 uppercase tracking-wider transition-all"
+              >
+                <History size={14} />
+                HISTORY
+              </button>
+
               {user?.plan && user.plan !== 'Free' ? (
                 <div className="hidden sm:flex flex-col items-end gap-1">
                   <div className="flex items-center gap-1.5 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
