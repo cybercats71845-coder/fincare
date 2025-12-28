@@ -1214,8 +1214,43 @@ const DarkPixelsInner = () => {
       setPendingFile(null);
       setInput('');
       createNewChat(mode);
-    } else {
-      setAppMode(mode);
+    }
+  };
+
+  const generateSmartTitle = async (threadId: string, userMsg: string, aiMsg: string) => {
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${API_KEY}` },
+        body: JSON.stringify({
+          model: MODELS.general.id,
+          messages: [
+            { role: 'system', content: 'You are a titling assistant. Generate a very brief (max 3-4 words) title for a conversation starting with the provided messages. Return ONLY the title text. No punctuation, no quotes, no conversational filler.' },
+            { role: 'user', content: `User: ${userMsg.slice(0, 200)}\nAI: ${aiMsg.slice(0, 200)}` }
+          ],
+          max_tokens: 20,
+          temperature: 0.3
+        })
+      });
+      const data = await res.json();
+      let newTitle = data.choices?.[0]?.message?.content?.trim().replace(/^"|"$/g, '') || userMsg.slice(0, 30);
+      if (newTitle.length > 40) newTitle = newTitle.slice(0, 37) + '...';
+
+      setThreads(prev => prev.map(t => t.id === threadId ? { ...t, title: newTitle } : t));
+
+      if (authState === 'user') {
+        fetch(`${API_BASE_URL}/threads/${threadId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: newTitle })
+        });
+      } else {
+        const local = JSON.parse(localStorage.getItem(GUEST_THREADS_KEY) || '[]');
+        const updated = local.map((t: any) => t.id === threadId ? { ...t, title: newTitle } : t);
+        localStorage.setItem(GUEST_THREADS_KEY, JSON.stringify(updated));
+      }
+    } catch (e) {
+      console.error("Titling error:", e);
     }
   };
 
@@ -1336,7 +1371,13 @@ const DarkPixelsInner = () => {
 
       if (appMode === 'canvas') { const code = extractCodeBlock(aiText); if (code) setPreviewCode(code); }
       const aiMsg: Message = { id: generateId(), role: 'assistant', content: aiText, timestamp: Date.now(), modelUsed: model };
-      setMessages(prev => [...prev, aiMsg]); if (activeId) saveMsg(aiMsg, activeId);
+      setMessages(prev => [...prev, aiMsg]);
+      if (activeId) {
+        saveMsg(aiMsg, activeId);
+        if (isNewConversation) {
+          generateSmartTitle(activeId, text, aiText);
+        }
+      }
     } catch (err: any) {
       if (err.name === 'AbortError') return;
       let displayMsg = `Error: ${err.message || "An unexpected error occurred"}`;
