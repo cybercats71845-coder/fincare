@@ -1509,17 +1509,17 @@ const DarkPixelsInner = () => {
               ) : user?.plan && user.plan !== 'Free' ? (
                 <div
                   onClick={() => setIsPricingOpen(true)}
-                  className="flex flex-col items-center gap-0.5 cursor-pointer min-w-0"
+                  className="flex flex-col items-center gap-0 cursor-pointer min-w-0"
                 >
-                  <div className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/20 rounded-md whitespace-nowrap">
-                    <div className="w-1 h-1 rounded-full bg-white animate-pulse shrink-0" />
-                    <span className="text-[10px] font-black text-white uppercase tracking-tighter truncate max-w-[70px]">{user.plan}</span>
-                  </div>
                   {user.plan !== 'Pro' && (
-                    <div className="text-[9px] font-black text-yellow-500 uppercase tracking-tighter flex items-center gap-0.5">
-                      UPGRADE <Zap size={8} fill="currentColor" />
+                    <div className="text-[11px] font-black text-yellow-500 uppercase tracking-tight flex items-center gap-1">
+                      UPGRADE <Zap size={10} fill="currentColor" />
                     </div>
                   )}
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-white/5 rounded-md whitespace-nowrap scale-[0.85] origin-top opacity-70">
+                    <div className="w-1 h-1 rounded-full bg-white shrink-0" />
+                    <span className="text-[9px] font-bold text-white uppercase tracking-tighter truncate max-w-[70px]">{user.plan}</span>
+                  </div>
                 </div>
               ) : (
                 <button
