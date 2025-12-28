@@ -384,7 +384,7 @@ const Sidebar = ({
         >
           <Plus size={16} /> New {appMode === 'canvas' ? 'Project' : (appMode === 'image' ? 'Image' : 'Chat')}
         </button>
-        <button onClick={onCloseMobile} className="md:hidden p-2 text-gray-500">
+        <button onClick={onCloseMobile} className="p-2 text-gray-500 hover:text-white transition-colors" title="Close Sidebar">
           <X size={20} />
         </button>
       </div>
@@ -1385,13 +1385,15 @@ const DarkPixelsInner = () => {
           {/* Top Row: Brand & Actions */}
           <div className="w-full flex items-center justify-between px-3 md:px-6 py-2 md:py-4">
             <div className="flex items-center gap-1 md:gap-3">
-              <button
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-2 hover:bg-gray-800 rounded-lg text-gray-400 -ml-2 transition-colors"
-                title="Toggle Sidebar"
-              >
-                <Menu size={20} />
-              </button>
+              {!isSidebarOpen && (
+                <button
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="hidden md:flex p-2 hover:bg-gray-800 rounded-lg text-gray-400 -ml-2 transition-colors"
+                  title="Open Sidebar"
+                >
+                  <Menu size={20} />
+                </button>
+              )}
               <img src="/logo.png" alt="Logo" className="w-10 h-10 md:w-8 md:h-8 object-contain shrink-0" />
               <h1 className="font-bold tracking-tight text-yellow-500 text-xl md:text-base uppercase truncate">DARKPIXELS AI</h1>
             </div>
