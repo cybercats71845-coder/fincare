@@ -1403,6 +1403,19 @@ const DarkPixelsInner = () => {
               <h1 className="font-black tracking-tighter text-yellow-500 text-[10px] md:text-base uppercase truncate max-w-[75px] sm:max-w-none">DARKPIXELS AI</h1>
             </div>
 
+            {/* Desktop Navigation (Center) */}
+            <div className="hidden md:flex bg-gray-900/50 p-1 rounded-xl items-center border border-gray-800 mx-4">
+              {['chat', 'canvas', 'image'].map((m) => (
+                <button
+                  key={m}
+                  onClick={() => switchMode(m as AppMode)}
+                  className={`px-4 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+
             {/* Middle Row: Mobile Plan Info (Compact pill/Upgrade) */}
             <div className="flex-1 md:hidden flex items-center justify-center px-1 overflow-hidden">
               {authState === 'guest' ? (
