@@ -735,11 +735,11 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
                 {isBullet && (
                   <span className="text-yellow-500 font-black shrink-0 mt-[6px] text-[10px]">●</span>
                 )}
-                <div className={`flex-1 ${isBullet ? 'text-white font-semibold' : 'text-gray-300'}`}>
+                <div className={`flex-1 ${isBullet ? 'text-white font-semibold' : 'text-gray-200'}`}>
                   {segments.map((seg, j) => {
                     if (seg.startsWith('**') && seg.endsWith('**')) {
                       return (
-                        <strong key={j} className="text-yellow-500 font-black px-0.5">
+                        <strong key={j} className="text-white font-black px-0.5">
                           {seg.slice(2, -2)}
                         </strong>
                       );
