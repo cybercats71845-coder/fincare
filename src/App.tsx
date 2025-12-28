@@ -808,7 +808,7 @@ const PricingModal = ({ isOpen, onClose, user, onPlanUpdate }: any) => {
   const plans = [
     {
       name: "Basic Plan",
-      price: "1",
+      price: "19",
       description: "Do more with smarter AI",
       level: 1,
       features: [
@@ -1379,7 +1379,7 @@ const DarkPixelsInner = () => {
 
       <div className="flex-1 flex overflow-hidden flex-col h-full bg-[#050505] relative">
         <div className="bg-yellow-500 text-black py-1 px-4 text-[10px] font-bold text-center tracking-[0.2em] uppercase z-[60] relative cursor-pointer hover:bg-yellow-400 transition-colors" onClick={() => setIsPricingOpen(true)}>
-          Special Offer: Upgrade to Pro and save up to 50% / Limited Time Only
+          Try the Basic Plan at just ₹19 / Limited Time Only
         </div>
         <header className="fixed top-[20px] md:top-0 left-0 right-0 md:static flex flex-col md:flex-row items-center justify-between border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-50">
           {/* Top Row: Brand & Actions */}
