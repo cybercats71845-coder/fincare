@@ -687,7 +687,7 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
           return (
             <div key={index} className="my-3 p-4 rounded-xl bg-yellow-900/10 border border-yellow-500/30 flex items-center gap-3">
               <div className="p-2 bg-yellow-500/20 rounded-lg">
-                <Sparkles size={20} className="text-yellow-500 animate-pulse" />
+                <img src="/logo.png" alt="Logo" className="w-5 h-5 object-contain" />
               </div>
               <div className="flex-1">
                 <h4 className="text-sm font-bold text-white">App Generated</h4>
