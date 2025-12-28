@@ -107,6 +107,9 @@ app.post('/api/init-db', async (req, res) => {
 app.post('/api/users', async (req, res) => {
     const { uid, email, displayName, photoURL } = req.body;
     try {
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan VARCHAR(50) DEFAULT 'Free'`);
+        await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_updated_at TIMESTAMP WITH TIME ZONE`);
+
         await pool.query(
             `INSERT INTO users (id, email, display_name, photo_url, last_login)
              VALUES ($1, $2, $3, $4, NOW())
