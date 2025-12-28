@@ -1418,7 +1418,15 @@ const DarkPixelsInner = () => {
                 HISTORY
               </button>
 
-              {user?.plan && user.plan !== 'Free' ? (
+              {authState === 'guest' ? (
+                <button
+                  onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }}
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-yellow-400 transition-all mr-2 shadow-lg shadow-yellow-900/40"
+                >
+                  <LogIn size={12} fill="currentColor" />
+                  Sign In to Upgrade
+                </button>
+              ) : user?.plan && user.plan !== 'Free' ? (
                 <div className="hidden sm:flex flex-col items-end gap-1">
                   <div className="flex items-center gap-1.5 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                     <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
@@ -1469,7 +1477,15 @@ const DarkPixelsInner = () => {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              {user?.plan && user.plan !== 'Free' ? (
+              {authState === 'guest' ? (
+                <button
+                  onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }}
+                  className="w-full py-2.5 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all mt-1"
+                >
+                  <LogIn size={12} fill="currentColor" />
+                  SIGN IN TO UPGRADE
+                </button>
+              ) : user?.plan && user.plan !== 'Free' ? (
                 <div className="flex flex-col gap-2">
                   <div className="w-full py-2 bg-gray-900/80 border border-yellow-500/20 rounded-xl flex items-center justify-center gap-2">
                     <Sparkles size={12} className="text-yellow-500" />
