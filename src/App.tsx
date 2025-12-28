@@ -1410,13 +1410,6 @@ const DarkPixelsInner = () => {
             </div>
 
             <div className="flex items-center gap-1 md:gap-4">
-              <button
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-900 border border-gray-800 hover:bg-gray-800 rounded-xl text-[10px] font-bold text-gray-400 uppercase tracking-wider transition-all"
-              >
-                <History size={14} />
-                HISTORY
-              </button>
 
               {authState === 'guest' ? (
                 <button
