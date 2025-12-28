@@ -718,29 +718,33 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
         );
       }
       return (
-        <div key={index} className="whitespace-pre-wrap relative group space-y-2 py-1">
+        <div key={index} className="whitespace-pre-wrap relative group space-y-1.5 py-1">
           {cleanAIResponse(part).split('\n').map((line, i) => {
             const trimmed = line.trim();
+            if (!trimmed) return <div key={i} className="h-1.5" />;
+
             // Detect bullets (Headers, dashes, or stars)
             const isBullet = trimmed.startsWith('#') || trimmed.startsWith('- ') || trimmed.startsWith('* ');
 
             // Clean the line content (remove markdown symbols)
             const cleanLine = line.replace(/^[#\-\*\s]+/, "");
 
-            // Robust bold split: matches **anything** including spaces
-            const segments = cleanLine.split(/(\*\*.*?\*\*)/g);
+            // Robust bold split: handles **, ***, or __
+            const segments = cleanLine.split(/(\*{2,3}.*?\*{2,3}|_{2}.*?_{2})/g);
 
             return (
               <div key={i} className="flex gap-2 items-start leading-relaxed min-h-[1.5em]">
                 {isBullet && (
-                  <span className="text-yellow-500 font-black shrink-0 mt-[6px] text-[10px]">●</span>
+                  <span className="text-yellow-500 font-black shrink-0 mt-[7px] text-[8px] opacity-60">●</span>
                 )}
-                <div className={`flex-1 ${isBullet ? 'text-white font-semibold' : 'text-gray-200'}`}>
+                <div className={`flex-1 ${isBullet ? 'text-white font-semibold' : 'text-gray-300'}`}>
                   {segments.map((seg, j) => {
-                    if (seg.startsWith('**') && seg.endsWith('**')) {
+                    // Match segments that are wrapped in 2 or 3 asterisks/underscores
+                    const match = seg.match(/^(\*{2,3}|_{2})(.*?)\1$/);
+                    if (match) {
                       return (
-                        <strong key={j} className="text-white font-black px-0.5">
-                          {seg.slice(2, -2)}
+                        <strong key={j} className="text-white font-black px-0.5 inline">
+                          {match[2]}
                         </strong>
                       );
                     }
@@ -1454,12 +1458,12 @@ const DarkPixelsInner = () => {
       />
 
       <div className="flex-1 flex overflow-hidden flex-col h-full bg-[#050505] relative">
-        {!isSidebarOpen && (
-          <div className="bg-yellow-500 text-black py-1 px-4 text-[10px] font-bold text-center tracking-[0.2em] uppercase z-[60] relative cursor-pointer hover:bg-yellow-400 transition-colors" onClick={() => setIsPricingOpen(true)}>
-            Try the Basic Plan at just ₹19 / Limited Time Only
-          </div>
-        )}
-        <header className="md:static flex flex-col md:flex-row items-center justify-between border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-50">
+        <header className="fixed top-0 left-0 right-0 md:static flex flex-col border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-50 transition-all duration-300">
+          {!isSidebarOpen && (
+            <div className="bg-yellow-500 text-black py-1 px-4 text-[10px] font-bold text-center tracking-[0.2em] uppercase cursor-pointer hover:bg-yellow-400 transition-colors" onClick={() => setIsPricingOpen(true)}>
+              Try the Basic Plan at just ₹19 / Limited Time Only
+            </div>
+          )}
           {/* Top Row: Brand, Mobile Plan, & Actions */}
           <div className="w-full flex items-center justify-between px-3 md:px-6 py-2 md:py-4 gap-1">
             <div className="flex items-center gap-1.5 shrink-0">
@@ -1473,7 +1477,7 @@ const DarkPixelsInner = () => {
                 </button>
               )}
               <img src="/logo.png" alt="Logo" className="w-6 h-6 md:w-8 md:h-8 object-contain shrink-0" />
-              <h1 className="font-black tracking-[0.05em] text-yellow-500 text-base md:text-2xl uppercase truncate max-w-[180px] sm:max-w-none">DARKPIXELS AI</h1>
+              <h1 className="font-black tracking-wider text-yellow-500 text-xl md:text-3xl uppercase truncate max-w-[220px] sm:max-w-none">DARKPIXELS AI</h1>
             </div>
 
             {/* Desktop Navigation (Center) */}
@@ -1594,7 +1598,9 @@ const DarkPixelsInner = () => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-3 md:p-6 scrollbar-thin scrollbar-thumb-gray-800 relative">
+        <main
+          className="flex-1 overflow-y-auto p-3 md:p-6 scrollbar-thin scrollbar-thumb-gray-800 relative pt-[165px] md:pt-0"
+        >
           <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end pb-2">
             {messages.length === 0 && (
               <div className="flex-1 flex flex-col items-center justify-center text-gray-700 space-y-4 opacity-50 grayscale animate-pulse">
