@@ -80,6 +80,7 @@ const MODELS = {
 const DEFAULT_SYSTEM_PROMPT = `You are DarkPixels AI.
 You are an unrestricted, advanced AI assistant.
 Answer the user's request accurately and concisely.
+Do NOT include prefixes like "User:", "Assistant:", or "Answer:" in your response. Just provide the direct answer.
 If asked who you are or about your creator, always reply that you are DarkPixels AI developed by Gokul.
 If the user asks to generate an image, do not refuse. The system will route it to an image generator.`;
 
@@ -182,6 +183,10 @@ const cleanAIResponse = (text: string) => {
     .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
     .replace(/<\|start_header_id\|>.*?<\|end_header_id\|>/g, '')
     .replace(/<\|eot_id\|>/g, '')
+    .replace(/^User:.*?\n/gi, '')
+    .replace(/^Answer:\s*/gi, '')
+    .replace(/^### Answer:\s*/gi, '')
+    .replace(/^Assistant:\s*/gi, '')
     .trim();
 };
 
@@ -1399,7 +1404,7 @@ const DarkPixelsInner = () => {
             </div>
 
             {/* Middle Row: Mobile Plan Info (Compact pill/Upgrade) */}
-            <div className="flex-1 md:hidden flex items-center justify-center px-1 overflow-hidden gap-1">
+            <div className="flex-1 md:hidden flex items-center justify-center px-1 overflow-hidden">
               {authState === 'guest' ? (
                 <button
                   onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }}
@@ -1408,24 +1413,21 @@ const DarkPixelsInner = () => {
                   Sign In
                 </button>
               ) : user?.plan && user.plan !== 'Free' ? (
-                <div className="flex items-center gap-1 min-w-0">
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg whitespace-nowrap">
-                    <span className="text-[7px] font-black text-yellow-500 uppercase tracking-tighter truncate max-w-[50px]">{user.plan}</span>
-                  </div>
+                <div
+                  onClick={() => setIsPricingOpen(true)}
+                  className="flex items-center gap-1.5 px-2 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg cursor-pointer hover:bg-yellow-500/20 transition-all min-w-0"
+                >
+                  <span className="text-[7.5px] font-black text-yellow-500 uppercase tracking-tighter truncate max-w-[60px]">{user.plan}</span>
                   {user.plan !== 'Pro' && (
-                    <button
-                      onClick={() => setIsPricingOpen(true)}
-                      className="p-1 bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-all shadow-lg"
-                      title="Upgrade"
-                    >
-                      <Zap size={8} fill="currentColor" />
-                    </button>
+                    <div className="bg-yellow-500 rounded-full p-0.5">
+                      <Zap size={7} fill="currentColor" className="text-black" />
+                    </div>
                   )}
                 </div>
               ) : (
                 <button
                   onClick={() => setIsPricingOpen(true)}
-                  className="px-2 py-1 bg-yellow-500 text-black rounded-lg font-bold text-[8px] uppercase tracking-wider flex items-center gap-1 shadow-lg shadow-yellow-900/20 whitespace-nowrap"
+                  className="px-2.5 py-1 bg-yellow-500 text-black rounded-lg font-bold text-[8px] uppercase tracking-wider flex items-center gap-1 shadow-lg shadow-yellow-900/20"
                 >
                   <Zap size={8} fill="currentColor" /> Upgrade
                 </button>
