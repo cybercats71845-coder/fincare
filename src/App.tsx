@@ -718,30 +718,42 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
         );
       }
       return (
-        <div key={index} className="whitespace-pre-wrap relative group space-y-2">
+        <div key={index} className="whitespace-pre-wrap relative group space-y-2 py-1">
           {cleanAIResponse(part).split('\n').map((line, i) => {
-            // Convert ### headers to point dots
-            const isBullet = line.trim().startsWith('#');
-            const cleanLine = line.replace(/^#+\s*/, isBullet ? '• ' : '');
+            const trimmed = line.trim();
+            // Detect bullets (Headers, dashes, or stars)
+            const isBullet = trimmed.startsWith('#') || trimmed.startsWith('- ') || trimmed.startsWith('* ');
 
-            // Split by bold markers
+            // Clean the line content (remove markdown symbols)
+            const cleanLine = line.replace(/^[#\-\*\s]+/, "");
+
+            // Robust bold split: matches **anything** including spaces
             const segments = cleanLine.split(/(\*\*.*?\*\*)/g);
 
             return (
-              <div key={i} className={`${isBullet ? 'pl-2 text-yellow-500/90 font-semibold' : ''} leading-relaxed`}>
-                {segments.map((seg, j) => {
-                  if (seg.startsWith('**') && seg.endsWith('**')) {
-                    return <strong key={j} className="text-yellow-500 font-extrabold px-0.5">{seg.slice(2, -2)}</strong>;
-                  }
-                  return seg;
-                })}
+              <div key={i} className="flex gap-2 items-start leading-relaxed min-h-[1.5em]">
+                {isBullet && (
+                  <span className="text-yellow-500 font-black shrink-0 mt-[6px] text-[10px]">●</span>
+                )}
+                <div className={`flex-1 ${isBullet ? 'text-white font-semibold' : 'text-gray-300'}`}>
+                  {segments.map((seg, j) => {
+                    if (seg.startsWith('**') && seg.endsWith('**')) {
+                      return (
+                        <strong key={j} className="text-yellow-500 font-black px-0.5">
+                          {seg.slice(2, -2)}
+                        </strong>
+                      );
+                    }
+                    return seg;
+                  })}
+                </div>
               </div>
             );
           })}
           {part.trim().length > 0 && !isUser && (
             <button
               onClick={() => navigator.clipboard.writeText(part)}
-              className="absolute -right-1 -top-1 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-yellow-500 transition-all p-1"
+              className="absolute -right-2 -top-1 opacity-0 group-hover:opacity-100 text-gray-500 hover:text-yellow-500 transition-all p-1.5 bg-gray-900/80 rounded-lg backdrop-blur"
               title="Copy text"
             ><Copy size={12} /></button>
           )}
