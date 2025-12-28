@@ -787,7 +787,7 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
   );
 };
 
-const SettingsModal = ({ isOpen, onClose, user, onLogin, onClearHistory }: any) => {
+const SettingsModal = ({ isOpen, onClose, user, onLogin, onClearHistory, onLogout }: any) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -816,17 +816,28 @@ const SettingsModal = ({ isOpen, onClose, user, onLogin, onClearHistory }: any) 
                   <p className="text-xs text-gray-400 truncate">{user.email || `ID: ${user.uid.slice(0, 12)}...`}</p>
                 </div>
               </div>
-              <div className="pt-4 border-t border-gray-800">
+              <div className="pt-4 border-t border-gray-800 space-y-2">
                 <button
                   onClick={() => {
                     if (confirm('Are you sure you want to delete all chat history? This cannot be undone.')) {
                       onClearHistory();
                     }
                   }}
-                  className="w-full flex items-center justify-center gap-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 py-3 rounded-lg transition-colors font-medium"
+                  className="w-full flex items-center justify-center gap-2 text-gray-400 hover:text-white hover:bg-gray-800 py-3 rounded-lg transition-colors font-medium text-sm"
                 >
                   <Trash2 size={16} /> Delete All History
                 </button>
+                {user.email && (
+                  <button
+                    onClick={() => {
+                      onLogout();
+                      onClose();
+                    }}
+                    className="w-full flex items-center justify-center gap-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 py-3 rounded-lg transition-colors font-black uppercase tracking-widest text-xs"
+                  >
+                    <LogOut size={16} /> Sign Out
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -1539,7 +1550,6 @@ const DarkPixelsInner = () => {
                     onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }}
                     className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-900/40"
                   >
-                    <LogIn size={12} fill="currentColor" />
                     Sign In
                   </button>
                 ) : user?.plan && user.plan !== 'Free' ? (
@@ -1570,10 +1580,7 @@ const DarkPixelsInner = () => {
 
               <div className="flex items-center gap-0.5 md:gap-2 shrink-0">
                 <button onClick={() => setIsSettingsOpen(true)} className="p-1 md:p-2 hover:bg-gray-800 rounded-lg text-gray-400">
-                  <Settings size={16} />
-                </button>
-                <button onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }} className="p-1 md:p-2 hover:bg-gray-800 rounded-lg text-red-500">
-                  <LogOut size={16} />
+                  <Settings size={18} />
                 </button>
               </div>
             </div>
@@ -1679,6 +1686,7 @@ const DarkPixelsInner = () => {
           user={user}
           onLogin={() => handleGoogleLogin()}
           onClearHistory={handleClearHistory}
+          onLogout={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }}
         />
 
         <PricingModal
