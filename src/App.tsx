@@ -373,7 +373,7 @@ const Sidebar = ({
         <div className="relative shrink-0 flex items-center">
           <button
             onClick={(e) => { e.stopPropagation(); setActiveMenuId(isMenuOpen ? null : thread.id); }}
-            className={`${active ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all transition-opacity`}
+            className={`p-1 hover:bg-white/10 rounded transition-all shrink-0 ${active ? 'text-yellow-500' : 'text-gray-500 hover:text-gray-300'}`}
           >
             <MoreVertical size={14} />
           </button>
