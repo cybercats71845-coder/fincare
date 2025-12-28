@@ -1383,9 +1383,11 @@ const DarkPixelsInner = () => {
       />
 
       <div className="flex-1 flex overflow-hidden flex-col h-full bg-[#050505] relative">
-        <div className="bg-yellow-500 text-black py-1 px-4 text-[10px] font-bold text-center tracking-[0.2em] uppercase z-[60] relative cursor-pointer hover:bg-yellow-400 transition-colors" onClick={() => setIsPricingOpen(true)}>
-          Try the Basic Plan at just ₹19 / Limited Time Only
-        </div>
+        {!isSidebarOpen && (
+          <div className="bg-yellow-500 text-black py-1 px-4 text-[10px] font-bold text-center tracking-[0.2em] uppercase z-[60] relative cursor-pointer hover:bg-yellow-400 transition-colors" onClick={() => setIsPricingOpen(true)}>
+            Try the Basic Plan at just ₹19 / Limited Time Only
+          </div>
+        )}
         <header className="fixed top-[20px] md:top-0 left-0 right-0 md:static flex flex-col md:flex-row items-center justify-between border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-50">
           {/* Top Row: Brand, Mobile Plan, & Actions */}
           <div className="w-full flex items-center justify-between px-3 md:px-6 py-2 md:py-4 gap-1">
@@ -1421,28 +1423,31 @@ const DarkPixelsInner = () => {
               {authState === 'guest' ? (
                 <button
                   onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }}
-                  className="px-2 py-1 bg-yellow-500 text-black rounded-lg font-bold text-[8px] uppercase tracking-wider shadow-lg shadow-yellow-900/20 whitespace-nowrap"
+                  className="px-3 py-1.5 bg-yellow-500 text-black rounded-lg font-bold text-[10px] uppercase tracking-wider shadow-lg shadow-yellow-900/20 whitespace-nowrap"
                 >
                   Sign In
                 </button>
               ) : user?.plan && user.plan !== 'Free' ? (
                 <div
                   onClick={() => setIsPricingOpen(true)}
-                  className="flex items-center gap-1.5 px-2 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg cursor-pointer hover:bg-yellow-500/20 transition-all min-w-0"
+                  className="flex flex-col items-center gap-0.5 cursor-pointer min-w-0"
                 >
-                  <span className="text-[7.5px] font-black text-yellow-500 uppercase tracking-tighter truncate max-w-[60px]">{user.plan}</span>
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/20 rounded-md whitespace-nowrap">
+                    <div className="w-1 h-1 rounded-full bg-white animate-pulse shrink-0" />
+                    <span className="text-[10px] font-black text-white uppercase tracking-tighter truncate max-w-[70px]">{user.plan}</span>
+                  </div>
                   {user.plan !== 'Pro' && (
-                    <div className="bg-yellow-500 rounded-full p-0.5">
-                      <Zap size={7} fill="currentColor" className="text-black" />
+                    <div className="text-[9px] font-black text-yellow-500 uppercase tracking-tighter flex items-center gap-0.5">
+                      UPGRADE <Zap size={8} fill="currentColor" />
                     </div>
                   )}
                 </div>
               ) : (
                 <button
                   onClick={() => setIsPricingOpen(true)}
-                  className="px-2.5 py-1 bg-yellow-500 text-black rounded-lg font-bold text-[8px] uppercase tracking-wider flex items-center gap-1 shadow-lg shadow-yellow-900/20"
+                  className="px-3 py-1.5 bg-yellow-500 text-black rounded-lg font-bold text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-lg shadow-yellow-900/20 whitespace-nowrap"
                 >
-                  <Zap size={8} fill="currentColor" /> Upgrade
+                  <Zap size={10} fill="currentColor" /> Upgrade
                 </button>
               )}
             </div>
@@ -1459,18 +1464,18 @@ const DarkPixelsInner = () => {
                     Sign In
                   </button>
                 ) : user?.plan && user.plan !== 'Free' ? (
-                  <div className="flex flex-col items-end gap-1">
-                    <div className="flex items-center gap-1.5 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                      <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
-                      <span className="text-[10px] font-black text-yellow-500 uppercase tracking-widest">{user.plan}</span>
+                  <div
+                    onClick={() => setIsPricingOpen(true)}
+                    className="flex flex-col items-end gap-1 cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg group-hover:bg-yellow-500/20 transition-all">
+                      <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                      <span className="text-[10px] font-black text-white uppercase tracking-widest">{user.plan}</span>
                     </div>
                     {user.plan !== 'Pro' && (
-                      <button
-                        onClick={() => setIsPricingOpen(true)}
-                        className="text-[9px] font-bold text-gray-500 hover:text-yellow-500 transition-colors uppercase tracking-widest flex items-center gap-1 group"
-                      >
-                        Upgrade to Pro <Zap size={8} className="group-hover:fill-yellow-500 transition-all" />
-                      </button>
+                      <div className="text-[9px] font-bold text-yellow-500 uppercase tracking-widest flex items-center gap-1">
+                        Upgrade to Pro <Zap size={8} fill="currentColor" />
+                      </div>
                     )}
                   </div>
                 ) : (
@@ -1496,13 +1501,13 @@ const DarkPixelsInner = () => {
           </div>
 
           {/* Bottom Row: Navigation & History (Mobile Only) */}
-          <div className="md:hidden w-full px-3 pb-2 flex items-center gap-2">
-            <div className="bg-gray-900/50 p-1 rounded-xl flex items-center border border-gray-800 flex-1">
+          <div className="md:hidden w-full px-3 pb-2 flex flex-col gap-2">
+            <div className="bg-gray-900/50 p-1 rounded-xl flex items-center border border-gray-800 w-full">
               {['chat', 'canvas', 'image'].map((m) => (
                 <button
                   key={m}
                   onClick={() => switchMode(m as AppMode)}
-                  className={`flex-1 py-1.5 rounded-lg text-[9px] font-bold transition-all uppercase ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}`}
+                  className={`flex-1 py-2.5 rounded-lg text-[11px] font-bold transition-all uppercase ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}`}
                 >
                   {m}
                 </button>
@@ -1510,9 +1515,10 @@ const DarkPixelsInner = () => {
             </div>
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="flex items-center gap-2 px-3 py-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all"
+              className="flex items-center gap-2 px-4 py-3 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all w-fit"
             >
-              <History size={12} />
+              <History size={14} />
+              CHAT HISTORY
             </button>
           </div>
         </header>
