@@ -868,7 +868,6 @@ const PricingModal = ({ isOpen, onClose, user, onPlanUpdate }: any) => {
     }
   ];
 
-  const filteredPlans = plans.filter(p => p.level > currentLevel);
 
   const handlePayment = async (plan: any) => {
     if (!user) {
@@ -956,11 +955,13 @@ const PricingModal = ({ isOpen, onClose, user, onPlanUpdate }: any) => {
           <p className="text-gray-400 max-w-lg mx-auto">Get access to more advanced models, faster generations, and exclusive features with our premium tiers.</p>
         </div>
 
-        <div className={`grid grid-cols-1 md:grid-cols-${filteredPlans.length} gap-6 max-w-4xl mx-auto`}>
-          {filteredPlans.map((plan) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`flex flex-col p-8 rounded-[2rem] border ${plan.color} ${plan.bg} relative overflow-hidden group hover:scale-[1.02] transition-all duration-500`}
+              className={`flex flex-col p-8 rounded-[2rem] border ${plan.color} ${plan.bg} relative overflow-hidden group hover:scale-[1.02] transition-all duration-500
+                ${plan.level === currentLevel ? 'border-yellow-500 shadow-2xl shadow-yellow-500/10' : ''}
+              `}
             >
               {plan.premium && (
                 <div className="absolute top-0 right-0 p-4">
@@ -968,7 +969,13 @@ const PricingModal = ({ isOpen, onClose, user, onPlanUpdate }: any) => {
                 </div>
               )}
 
-              <div className="mb-8">
+              {plan.level === currentLevel && (
+                <div className="absolute top-0 left-0 p-4">
+                  <div className="bg-yellow-500/20 text-yellow-500 text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-yellow-500/30 backdrop-blur-sm">Current Plan</div>
+                </div>
+              )}
+
+              <div className="mb-8 mt-4">
                 <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
                 <div className="flex items-baseline gap-1 mt-4">
                   <span className="text-gray-400 text-lg">₹</span>
@@ -979,14 +986,27 @@ const PricingModal = ({ isOpen, onClose, user, onPlanUpdate }: any) => {
               </div>
 
               <button
-                onClick={() => handlePayment(plan)}
+                onClick={() => plan.level > currentLevel && handlePayment(plan)}
+                disabled={plan.level <= currentLevel}
                 className={`w-full py-4 rounded-2xl font-bold transition-all mb-8 flex items-center justify-center gap-2
-                  ${plan.name === 'Pro'
-                    ? 'bg-yellow-500 text-black hover:bg-yellow-400 shadow-lg shadow-yellow-900/20'
-                    : 'bg-white text-black hover:bg-gray-100'}`}
+                  ${plan.level === currentLevel
+                    ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 cursor-default'
+                    : plan.level < currentLevel
+                      ? 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-50'
+                      : plan.name === 'Pro'
+                        ? 'bg-yellow-500 text-black hover:bg-yellow-400 shadow-lg shadow-yellow-900/20'
+                        : 'bg-white text-black hover:bg-gray-100'}`}
               >
-                <Zap size={16} fill="currentColor" />
-                {plan.buttonText}
+                {plan.level === currentLevel ? (
+                  <>Your Plan</>
+                ) : plan.level < currentLevel ? (
+                  <>Included</>
+                ) : (
+                  <>
+                    <Zap size={16} fill="currentColor" />
+                    {plan.buttonText}
+                  </>
+                )}
               </button>
 
               <div className="space-y-4 flex-1">
@@ -1005,13 +1025,6 @@ const PricingModal = ({ isOpen, onClose, user, onPlanUpdate }: any) => {
               </div>
             </div>
           ))}
-          {filteredPlans.length === 0 && (
-            <div className="col-span-full py-12 text-center bg-yellow-500/10 border border-yellow-500/20 rounded-3xl">
-              <Sparkles size={48} className="mx-auto text-yellow-500 mb-4" />
-              <h3 className="text-xl font-bold text-white">You're on the Pro Plan!</h3>
-              <p className="text-gray-400 mt-2">You already have access to all premium features.</p>
-            </div>
-          )}
         </div>
       </div>
     </div>
