@@ -1402,7 +1402,7 @@ const DarkPixelsInner = () => {
                 </button>
               )}
               <img src="/logo.png" alt="Logo" className="w-6 h-6 md:w-8 md:h-8 object-contain shrink-0" />
-              <h1 className="font-black tracking-tighter text-yellow-500 text-base md:text-2xl uppercase truncate max-w-[150px] sm:max-w-none">DARKPIXELS AI</h1>
+              <h1 className="font-black tracking-[0.05em] text-yellow-500 text-base md:text-2xl uppercase truncate max-w-[180px] sm:max-w-none">DARKPIXELS AI</h1>
             </div>
 
             {/* Desktop Navigation (Center) */}
