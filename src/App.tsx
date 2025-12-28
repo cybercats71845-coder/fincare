@@ -1382,9 +1382,9 @@ const DarkPixelsInner = () => {
           Try the Basic Plan at just ₹19 / Limited Time Only
         </div>
         <header className="fixed top-[20px] md:top-0 left-0 right-0 md:static flex flex-col md:flex-row items-center justify-between border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-50">
-          {/* Top Row: Brand & Actions */}
-          <div className="w-full flex items-center justify-between px-3 md:px-6 py-2 md:py-4">
-            <div className="flex items-center gap-1 md:gap-3">
+          {/* Top Row: Brand, Mobile Plan, & Actions */}
+          <div className="w-full flex items-center justify-between px-3 md:px-6 py-2 md:py-4 gap-1">
+            <div className="flex items-center gap-1.5 shrink-0">
               {!isSidebarOpen && (
                 <button
                   onClick={() => setIsSidebarOpen(true)}
@@ -1394,129 +1394,111 @@ const DarkPixelsInner = () => {
                   <Menu size={20} />
                 </button>
               )}
-              <img src="/logo.png" alt="Logo" className="w-10 h-10 md:w-8 md:h-8 object-contain shrink-0" />
-              <h1 className="font-bold tracking-tight text-yellow-500 text-xl md:text-base uppercase truncate">DARKPIXELS AI</h1>
+              <img src="/logo.png" alt="Logo" className="w-6 h-6 md:w-8 md:h-8 object-contain shrink-0" />
+              <h1 className="font-black tracking-tighter text-yellow-500 text-[10px] md:text-base uppercase truncate max-w-[75px] sm:max-w-none">DARKPIXELS AI</h1>
             </div>
 
-            {/* Desktop Navigation (Hidden on Mobile) */}
-            <div className="hidden md:flex bg-gray-900/50 p-1 rounded-xl items-center border border-gray-800">
-              {['chat', 'canvas', 'image'].map((m) => (
-                <button
-                  key={m}
-                  onClick={() => switchMode(m as AppMode)}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}`}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-1 md:gap-4">
-
+            {/* Middle Row: Mobile Plan Info (Compact pill/Upgrade) */}
+            <div className="flex-1 md:hidden flex items-center justify-center px-1 overflow-hidden gap-1">
               {authState === 'guest' ? (
                 <button
                   onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }}
-                  className="hidden sm:flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-yellow-400 transition-all mr-2 shadow-lg shadow-yellow-900/40"
+                  className="px-2 py-1 bg-yellow-500 text-black rounded-lg font-bold text-[8px] uppercase tracking-wider shadow-lg shadow-yellow-900/20 whitespace-nowrap"
                 >
-                  <LogIn size={12} fill="currentColor" />
                   Sign In
                 </button>
               ) : user?.plan && user.plan !== 'Free' ? (
-                <div className="hidden sm:flex flex-col items-end gap-1">
-                  <div className="flex items-center gap-1.5 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
-                    <span className="text-[10px] font-black text-yellow-500 uppercase tracking-widest">{user.plan}</span>
+                <div className="flex items-center gap-1 min-w-0">
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg whitespace-nowrap">
+                    <span className="text-[7px] font-black text-yellow-500 uppercase tracking-tighter truncate max-w-[50px]">{user.plan}</span>
                   </div>
                   {user.plan !== 'Pro' && (
                     <button
                       onClick={() => setIsPricingOpen(true)}
-                      className="text-[9px] font-bold text-gray-500 hover:text-yellow-500 transition-colors uppercase tracking-widest flex items-center gap-1 group"
+                      className="p-1 bg-yellow-500 text-black rounded hover:bg-yellow-400 transition-all shadow-lg"
+                      title="Upgrade"
                     >
-                      Upgrade to Pro <Zap size={8} className="group-hover:fill-yellow-500 transition-all" />
+                      <Zap size={8} fill="currentColor" />
                     </button>
                   )}
                 </div>
               ) : (
                 <button
                   onClick={() => setIsPricingOpen(true)}
-                  className="hidden sm:flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-yellow-400 transition-all mr-2 shadow-lg shadow-yellow-900/40"
+                  className="px-2 py-1 bg-yellow-500 text-black rounded-lg font-bold text-[8px] uppercase tracking-wider flex items-center gap-1 shadow-lg shadow-yellow-900/20 whitespace-nowrap"
                 >
-                  <Zap size={12} fill="currentColor" />
-                  Upgrade to Pro
+                  <Zap size={8} fill="currentColor" /> Upgrade
                 </button>
               )}
+            </div>
 
-              <div className="flex items-center gap-1 md:gap-2">
-                <button onClick={() => setIsSettingsOpen(true)} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-gray-400">
-                  <Settings size={18} />
+            <div className="flex items-center gap-1 md:gap-4 shrink-0">
+              {/* Desktop Only Plan Status */}
+              <div className="hidden md:flex items-center gap-4">
+                {authState === 'guest' ? (
+                  <button
+                    onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }}
+                    className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-900/40"
+                  >
+                    <LogIn size={12} fill="currentColor" />
+                    Sign In
+                  </button>
+                ) : user?.plan && user.plan !== 'Free' ? (
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                      <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                      <span className="text-[10px] font-black text-yellow-500 uppercase tracking-widest">{user.plan}</span>
+                    </div>
+                    {user.plan !== 'Pro' && (
+                      <button
+                        onClick={() => setIsPricingOpen(true)}
+                        className="text-[9px] font-bold text-gray-500 hover:text-yellow-500 transition-colors uppercase tracking-widest flex items-center gap-1 group"
+                      >
+                        Upgrade to Pro <Zap size={8} className="group-hover:fill-yellow-500 transition-all" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsPricingOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-900/40"
+                  >
+                    <Zap size={12} fill="currentColor" />
+                    Upgrade to Pro
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-0.5 md:gap-2 shrink-0">
+                <button onClick={() => setIsSettingsOpen(true)} className="p-1 md:p-2 hover:bg-gray-800 rounded-lg text-gray-400">
+                  <Settings size={16} />
                 </button>
-                <button onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-red-500">
-                  <LogOut size={18} />
+                <button onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }} className="p-1 md:p-2 hover:bg-gray-800 rounded-lg text-red-500">
+                  <LogOut size={16} />
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Bottom Row: Mobile Navigation (Only visible on Mobile) */}
-          <div className="md:hidden w-full px-3 pb-2 flex flex-col gap-2">
-            <div className="bg-gray-900/50 p-1 rounded-xl flex items-center border border-gray-800 w-full">
+          {/* Bottom Row: Navigation & History (Mobile Only) */}
+          <div className="md:hidden w-full px-3 pb-2 flex items-center gap-2">
+            <div className="bg-gray-900/50 p-1 rounded-xl flex items-center border border-gray-800 flex-1">
               {['chat', 'canvas', 'image'].map((m) => (
                 <button
                   key={m}
                   onClick={() => switchMode(m as AppMode)}
-                  className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all uppercase ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}`}
+                  className={`flex-1 py-1.5 rounded-lg text-[9px] font-bold transition-all uppercase ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}`}
                 >
                   {m}
                 </button>
               ))}
             </div>
-
-            <div className="flex flex-col gap-1.5">
-              {authState === 'guest' ? (
-                <button
-                  onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }}
-                  className="w-full py-2.5 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all mt-1"
-                >
-                  <LogIn size={12} fill="currentColor" />
-                  SIGN IN
-                </button>
-              ) : user?.plan && user.plan !== 'Free' ? (
-                <div className="flex flex-col gap-2">
-                  <div className="w-full py-2 bg-gray-900/80 border border-yellow-500/20 rounded-xl flex items-center justify-center gap-2">
-                    <Sparkles size={12} className="text-yellow-500" />
-                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{user.plan} Active</span>
-                  </div>
-                  {user.plan !== 'Pro' && (
-                    <button
-                      onClick={() => setIsPricingOpen(true)}
-                      className="w-full py-2.5 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
-                    >
-                      <Zap size={12} fill="currentColor" />
-                      UPGRADE TO PRO
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <button
-                  onClick={() => setIsPricingOpen(true)}
-                  className="w-full py-2.5 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all mt-1"
-                >
-                  <Zap size={12} fill="currentColor" />
-                  UPGRADE TO PRO
-                </button>
-              )}
-            </div>
-
-            {/* 3rd Row: Chat History Button */}
-            <div className="flex justify-start pb-1">
-              <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"
-              >
-                <History size={12} />
-                CHAT HISTORY
-              </button>
-            </div>
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 rounded-xl text-[9px] font-bold uppercase tracking-wider transition-all"
+            >
+              <History size={12} />
+            </button>
           </div>
         </header>
 
@@ -1610,8 +1592,8 @@ const DarkPixelsInner = () => {
             }
           }}
         />
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 
