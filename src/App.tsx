@@ -1052,7 +1052,7 @@ const PricingModal = ({ isOpen, onClose, user, onPlanUpdate }: any) => {
                         : 'bg-white text-black hover:bg-gray-100'}`}
               >
                 {plan.level === currentLevel ? (
-                  <>Your Plan</>
+                  <>Current Plan</>
                 ) : plan.level < currentLevel ? (
                   <>Included</>
                 ) : (
@@ -1508,7 +1508,6 @@ const DarkPixelsInner = () => {
               ))}
             </div>
 
-            {/* Middle Row: Mobile Plan Info (Compact pill/Upgrade) */}
             <div className="flex-1 md:hidden flex items-center justify-center px-1 overflow-hidden">
               {authState === 'guest' ? (
                 <button
@@ -1517,27 +1516,12 @@ const DarkPixelsInner = () => {
                 >
                   Sign In
                 </button>
-              ) : user?.plan && user.plan !== 'Free' ? (
-                <div
-                  onClick={() => setIsPricingOpen(true)}
-                  className="flex flex-col items-center gap-0 cursor-pointer min-w-0"
-                >
-                  {user.plan !== 'Pro' && (
-                    <div className="text-[11px] font-black text-yellow-500 uppercase tracking-tight flex items-center gap-1">
-                      UPGRADE <Zap size={10} fill="currentColor" />
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1 px-2 py-0.5 bg-white/5 rounded-md whitespace-nowrap scale-[0.85] origin-top opacity-70">
-                    <div className="w-1 h-1 rounded-full bg-white shrink-0" />
-                    <span className="text-[9px] font-bold text-white uppercase tracking-tighter truncate max-w-[70px]">{user.plan}</span>
-                  </div>
-                </div>
               ) : (
                 <button
                   onClick={() => setIsPricingOpen(true)}
-                  className="px-3 py-1.5 bg-yellow-500 text-black rounded-lg font-bold text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-lg shadow-yellow-900/20 whitespace-nowrap"
+                  className="p-2 bg-yellow-500/10 text-yellow-500 rounded-full border border-yellow-500/20 shadow-lg shadow-yellow-900/10 animate-pulse"
                 >
-                  <Zap size={10} fill="currentColor" /> Upgrade
+                  <Zap size={18} fill="currentColor" />
                 </button>
               )}
             </div>
