@@ -922,7 +922,6 @@ const PricingModal = ({ isOpen, onClose, user, onPlanUpdate }: any) => {
     }
   ];
 
-
   const handlePayment = async (plan: any) => {
     if (!user) {
       alert("Please sign in to upgrade.");
@@ -995,90 +994,83 @@ const PricingModal = ({ isOpen, onClose, user, onPlanUpdate }: any) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md p-4 overflow-y-auto">
-      <div className="w-full max-w-6xl relative animate-in fade-in zoom-in duration-300">
-        <button
-          onClick={onClose}
-          className="absolute -top-12 right-0 md:-right-8 text-gray-400 hover:text-white transition-colors"
-        >
-          <X size={32} />
-        </button>
+    <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md overflow-y-auto overscroll-contain">
+      <div className="min-h-full w-full flex items-start justify-center p-4 md:p-8">
+        <div className="w-full max-w-6xl relative animate-in fade-in zoom-in duration-300 my-auto">
+          <button
+            onClick={onClose}
+            className="fixed top-4 right-4 md:absolute md:-top-12 md:-right-8 text-gray-400 hover:text-white transition-colors z-[110] bg-black/50 rounded-full p-1"
+          >
+            <X size={32} />
+          </button>
 
-        <div className="text-center mb-10">
-          <h2 className="text-4xl font-black text-white mb-4 tracking-tight">Upgrade your plan</h2>
-          <p className="text-gray-400 max-w-lg mx-auto">Get access to more advanced models, faster generations, and exclusive features with our premium tiers.</p>
-        </div>
+          <div className="text-center mb-10 mt-12 md:mt-0">
+            <h2 className="text-4xl font-black text-white mb-4 tracking-tight">Upgrade your plan</h2>
+            <p className="text-gray-400 max-w-lg mx-auto italic">Get access to more advanced models, faster generations, and exclusive features with our premium tiers.</p>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {plans.map((plan) => (
-            <div
-              key={plan.name}
-              className={`flex flex-col p-8 rounded-[2rem] border ${plan.color} ${plan.bg} relative overflow-hidden group hover:scale-[1.02] transition-all duration-500
-                ${plan.level === currentLevel ? 'border-yellow-500 shadow-2xl shadow-yellow-500/10' : ''}
-              `}
-            >
-              {plan.premium && (
-                <div className="absolute top-0 right-0 p-4">
-                  <div className="bg-yellow-500 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-widest">Best Value</div>
-                </div>
-              )}
-
-              {plan.level === currentLevel && (
-                <div className="absolute top-0 left-0 p-4">
-                  <div className="bg-yellow-500/20 text-yellow-500 text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-yellow-500/30 backdrop-blur-sm">Current Plan</div>
-                </div>
-              )}
-
-              <div className="mb-8 mt-4">
-                <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
-                <div className="flex items-baseline gap-1 mt-4">
-                  <span className="text-gray-400 text-lg">₹</span>
-                  <span className="text-5xl font-black text-white">{plan.price}</span>
-                  <span className="text-gray-500 text-sm">/ month</span>
-                </div>
-                <p className="text-gray-400 text-sm mt-4 font-medium">{plan.description}</p>
-              </div>
-
-              <button
-                onClick={() => plan.level > currentLevel && handlePayment(plan)}
-                disabled={plan.level <= currentLevel}
-                className={`w-full py-4 rounded-2xl font-bold transition-all mb-8 flex items-center justify-center gap-2
-                  ${plan.level === currentLevel
-                    ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 cursor-default'
-                    : plan.level < currentLevel
-                      ? 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-50'
-                      : plan.name === 'Pro'
-                        ? 'bg-yellow-500 text-black hover:bg-yellow-400 shadow-lg shadow-yellow-900/20'
-                        : 'bg-white text-black hover:bg-gray-100'}`}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto pb-8">
+            {plans.map((plan) => (
+              <div
+                key={plan.name}
+                className={`flex flex-col p-8 rounded-[2rem] border ${plan.color} ${plan.bg} relative overflow-hidden group hover:scale-[1.02] transition-all duration-500
+                  ${plan.level === currentLevel ? 'border-yellow-500 shadow-2xl shadow-yellow-500/10' : ''}
+                `}
               >
-                {plan.level === currentLevel ? (
-                  <>Current Plan</>
-                ) : plan.level < currentLevel ? (
-                  <>Included</>
-                ) : (
-                  <>
-                    <Zap size={16} fill="currentColor" />
-                    {plan.buttonText}
-                  </>
-                )}
-              </button>
-
-              <div className="space-y-4 flex-1">
-                {plan.features.map((feature, i) => (
-                  <div key={i} className="flex gap-3 text-sm text-gray-300 leading-tight">
-                    <div className="shrink-0 mt-0.5 text-yellow-500/80">
-                      <Sparkles size={14} />
-                    </div>
-                    <span>{feature}</span>
+                {plan.premium && (
+                  <div className="absolute top-0 right-0 p-4">
+                    <div className="bg-yellow-500 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-widest">Best Value</div>
                   </div>
-                ))}
-              </div>
+                )}
 
-              <div className="mt-8 pt-6 border-t border-gray-800">
-                <p className="text-[10px] text-gray-600 uppercase tracking-widest text-center">Limits apply · Terms of service</p>
+                {plan.level === currentLevel && (
+                  <div className="absolute top-0 left-0 p-4">
+                    <div className="bg-yellow-500/20 text-yellow-500 text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-widest border border-yellow-500/30 backdrop-blur-sm">Current Plan</div>
+                  </div>
+                )}
+
+                <div className="mb-8 mt-4">
+                  <h3 className="text-2xl font-bold text-white mb-2">{plan.name}</h3>
+                  <div className="flex items-baseline gap-1 mt-4">
+                    <span className="text-gray-400 text-lg">₹</span>
+                    <span className="text-5xl font-black text-white">{plan.price}</span>
+                    <span className="text-gray-500 text-sm">/ month</span>
+                  </div>
+                  <p className="text-gray-400 text-sm mt-4 font-medium">{plan.description}</p>
+                </div>
+
+                <button
+                  onClick={() => plan.level > currentLevel && handlePayment(plan)}
+                  disabled={plan.level <= currentLevel}
+                  className={`w-full py-4 rounded-2xl font-bold transition-all mb-8 flex items-center justify-center gap-2
+                    ${plan.level === currentLevel
+                      ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 cursor-default'
+                      : plan.level < currentLevel
+                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed opacity-50'
+                        : plan.name === 'Pro'
+                          ? 'bg-yellow-500 text-black hover:bg-yellow-400 shadow-lg shadow-yellow-900/20'
+                          : 'bg-white text-black hover:bg-gray-100'}`}
+                >
+                  {plan.level === currentLevel ? 'Current Plan' : (plan.level < currentLevel ? 'Included' : plan.buttonText)}
+                </button>
+
+                <div className="space-y-4 flex-1">
+                  {plan.features.map((feature, i) => (
+                    <div key={i} className="flex gap-3 text-sm text-gray-300 leading-tight">
+                      <div className="shrink-0 mt-0.5 text-yellow-500/80">
+                        <Sparkles size={14} />
+                      </div>
+                      <span>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-8 pt-6 border-t border-gray-800">
+                  <p className="text-[10px] text-gray-600 uppercase tracking-widest text-center">Limits apply · Terms of service</p>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -1226,13 +1218,13 @@ const DarkPixelsInner = () => {
 
   const switchMode = (mode: AppMode) => {
     if (appMode === mode) return;
-    const hasMessages = messages.length > 0;
-
-    if (hasMessages) {
+    if (messages.length > 0) {
       setPreviewCode(null);
       setPendingFile(null);
       setInput('');
       createNewChat(mode);
+    } else {
+      setAppMode(mode);
     }
   };
 
@@ -1473,15 +1465,16 @@ const DarkPixelsInner = () => {
       />
 
       <div className="flex-1 flex overflow-hidden flex-col h-full bg-[#050505] relative">
-        <header className="fixed top-0 left-0 right-0 md:static flex flex-col border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-50 transition-all duration-300">
+        <header className="sticky top-0 left-0 right-0 md:static flex flex-col border-b border-gray-800 bg-[#050505]/95 backdrop-blur z-50 transition-all duration-300 overscroll-none">
           {!isSidebarOpen && (
             <div className="bg-yellow-500 text-black py-1 px-4 text-[10px] font-bold text-center tracking-[0.2em] uppercase cursor-pointer hover:bg-yellow-400 transition-colors" onClick={() => setIsPricingOpen(true)}>
               Try the Basic Plan at just ₹19 / Limited Time Only
             </div>
           )}
-          {/* Top Row: Brand, Mobile Plan, & Actions */}
+
           <div className="w-full flex items-center justify-between px-3 md:px-6 py-2 md:py-4 gap-1">
-            <div className="flex items-center gap-1.5 shrink-0">
+            {/* Left: Brand */}
+            <div className="flex items-center gap-1.5 shrink-0 min-w-0">
               {!isSidebarOpen && (
                 <button
                   onClick={() => setIsSidebarOpen(true)}
@@ -1492,10 +1485,10 @@ const DarkPixelsInner = () => {
                 </button>
               )}
               <img src="/logo.png" alt="Logo" className="w-6 h-6 md:w-8 md:h-8 object-contain shrink-0" />
-              <h1 className="font-black tracking-wider text-yellow-500 text-xl md:text-3xl uppercase truncate max-w-[220px] sm:max-w-none">DARKPIXELS AI</h1>
+              <h1 className="font-black tracking-wider text-yellow-500 text-xl md:text-3xl uppercase truncate">DARKPIXELS AI</h1>
             </div>
 
-            {/* Desktop Navigation (Center) */}
+            {/* Center: Desktop Navigation */}
             <div className="hidden md:flex bg-gray-900/50 p-1 rounded-xl items-center border border-gray-800 mx-4">
               {['chat', 'canvas', 'image'].map((m) => (
                 <button
@@ -1508,26 +1501,27 @@ const DarkPixelsInner = () => {
               ))}
             </div>
 
-            <div className="flex-1 md:hidden flex items-center justify-center px-1 overflow-hidden">
-              {authState === 'guest' ? (
-                <button
-                  onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }}
-                  className="px-3 py-1.5 bg-yellow-500 text-black rounded-lg font-bold text-[10px] uppercase tracking-wider shadow-lg shadow-yellow-900/20 whitespace-nowrap"
-                >
-                  Sign In
-                </button>
-              ) : (
-                <button
+            {/* Mobile Only: Plan Status (Center) */}
+            <div className="md:hidden flex-1 flex flex-col items-center justify-center min-w-0 px-1">
+              {authState !== 'guest' && (
+                <div
                   onClick={() => setIsPricingOpen(true)}
-                  className="p-2 bg-yellow-500/10 text-yellow-500 rounded-full border border-yellow-500/20 shadow-lg shadow-yellow-900/10 animate-pulse"
+                  className="flex flex-col items-center gap-0 cursor-pointer"
                 >
-                  <Zap size={18} fill="currentColor" />
-                </button>
+                  <div className="text-[11px] font-black text-yellow-500 uppercase tracking-tight flex items-center gap-1">
+                    UPGRADE <Zap size={10} fill="currentColor" />
+                  </div>
+                  <div className="flex items-center gap-1 px-2 py-0.5 bg-yellow-500/10 border border-yellow-500/20 rounded-md scale-[0.85] origin-top">
+                    <div className="w-1 h-1 rounded-full bg-white shrink-0" />
+                    <span className="text-[9px] font-black text-white uppercase tracking-tighter truncate max-w-[60px] leading-tight mt-[-1px]">{user?.plan || 'Free'}</span>
+                  </div>
+                </div>
               )}
             </div>
 
+            {/* Right: Desktop Actions & Settings */}
             <div className="flex items-center gap-1 md:gap-4 shrink-0">
-              {/* Desktop Only Plan Status */}
+              {/* Desktop Only Actions */}
               <div className="hidden md:flex items-center gap-4">
                 {authState === 'guest' ? (
                   <button
@@ -1547,7 +1541,7 @@ const DarkPixelsInner = () => {
                     </div>
                     {user.plan !== 'Pro' && (
                       <div className="text-[9px] font-bold text-yellow-500 uppercase tracking-widest flex items-center gap-1">
-                        Upgrade to Pro <Zap size={8} fill="currentColor" />
+                        Upgrade <Zap size={8} fill="currentColor" />
                       </div>
                     )}
                   </div>
@@ -1562,8 +1556,17 @@ const DarkPixelsInner = () => {
                 )}
               </div>
 
-              <div className="flex items-center gap-0.5 md:gap-2 shrink-0">
-                <button onClick={() => setIsSettingsOpen(true)} className="p-1 md:p-2 hover:bg-gray-800 rounded-lg text-gray-400">
+              {/* Shared: Settings */}
+              <div className="flex items-center gap-0.5 md:gap-2">
+                {authState === 'guest' && (
+                  <button
+                    onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }}
+                    className="md:hidden px-3 py-1.5 bg-yellow-500 text-black rounded-lg font-bold text-[10px] uppercase tracking-wider shadow-lg shadow-yellow-900/20 mr-1"
+                  >
+                    Sign In
+                  </button>
+                )}
+                <button onClick={() => setIsSettingsOpen(true)} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-gray-400 transition-colors">
                   <Settings size={18} />
                 </button>
               </div>
@@ -1577,7 +1580,7 @@ const DarkPixelsInner = () => {
                 <button
                   key={m}
                   onClick={() => switchMode(m as AppMode)}
-                  className={`flex-1 py-2.5 rounded-lg text-[11px] font-bold transition-all uppercase ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}`}
+                  className={`flex-1 py-2 rounded-lg text-[11px] font-bold transition-all uppercase ${appMode === m ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-900/40' : 'text-gray-500 hover:text-white'}`}
                 >
                   {m}
                 </button>
@@ -1585,16 +1588,16 @@ const DarkPixelsInner = () => {
             </div>
             <button
               onClick={() => setIsSidebarOpen(true)}
-              className="flex items-center gap-2 px-4 py-3 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all w-fit"
+              className="flex items-center gap-2 px-3 py-2.5 bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all w-fit"
             >
               <History size={14} />
-              CHAT HISTORY
+              History
             </button>
           </div>
         </header>
 
         <main
-          className="flex-1 overflow-y-auto p-3 md:p-6 scrollbar-thin scrollbar-thumb-gray-800 relative pt-[165px] md:pt-0"
+          className="flex-1 overflow-y-auto p-3 md:p-6 scrollbar-thin scrollbar-thumb-gray-800 relative md:pt-0"
         >
           <div className="max-w-3xl mx-auto flex flex-col min-h-full justify-end pb-2">
             {messages.length === 0 && (
