@@ -723,11 +723,15 @@ const MessageBubble = ({ message, onPreview, appMode, onRetry }: { message: Mess
             const trimmed = line.trim();
             if (!trimmed) return <div key={i} className="h-1.5" />;
 
-            // Detect bullets (Headers, dashes, or stars)
-            const isBullet = trimmed.startsWith('#') || trimmed.startsWith('- ') || trimmed.startsWith('* ');
+            // Detect bullets properly: Headers (#), or lists (- / *) followed by a space
+            const isHeader = trimmed.startsWith('#');
+            const isList = /^[-*]\s+/.test(trimmed);
+            const isBullet = isHeader || isList;
 
-            // Clean the line content (remove markdown symbols)
-            const cleanLine = line.replace(/^[#\-\*\s]+/, "");
+            // Clean the line content: only strip the indicator, leaving everything else intact
+            let cleanLine = line;
+            if (isHeader) cleanLine = line.replace(/^#+\s*/, "");
+            else if (isList) cleanLine = line.replace(/^[-*]\s+/, "");
 
             // Robust bold split: handles **, ***, or __
             const segments = cleanLine.split(/(\*{2,3}.*?\*{2,3}|_{2}.*?_{2})/g);
@@ -1378,7 +1382,7 @@ const DarkPixelsInner = () => {
       setMessages(prev => [...prev, aiMsg]);
       if (activeId) {
         saveMsg(aiMsg, activeId);
-        if (isNewConversation) {
+        if (isNewConversation || messages.length === 1) {
           generateSmartTitle(activeId, text, aiText);
         }
       }
