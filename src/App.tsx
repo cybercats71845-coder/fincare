@@ -8,7 +8,7 @@ import {
   LayoutTemplate, Sparkles,
   Eye, FileCode, Layout, MessageSquareText, History,
   Palette, Loader2, AlertCircle, RefreshCw, Copy, UserCheck, Square,
-  Zap, Menu
+  Zap, Menu, MoreVertical, Share2
 } from 'lucide-react';
 import { GoogleOAuthProvider, useGoogleLogin } from '@react-oauth/google';
 
@@ -341,6 +341,7 @@ const Sidebar = ({
   isOpen,
   onCloseMobile,
   onDeleteThread,
+  onShareThread,
   appMode
 }: any) => {
   const sidebarClasses = isOpen
@@ -352,12 +353,16 @@ const Sidebar = ({
   const imageThreads = threads.filter((t: Thread) => t.type === 'image');
   const chatThreads = threads.filter((t: Thread) => !t.type || t.type === 'chat');
 
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
   const ThreadItem = ({ thread, active, icon }: { thread: Thread, active: boolean, icon: React.ReactNode }) => {
+    const isMenuOpen = activeMenuId === thread.id;
+
     return (
       <div
         key={thread.id}
         onClick={() => { onSelectThread(thread.id); onCloseMobile(); }}
-        className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all text-sm mb-1
+        className={`group relative flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all text-sm mb-1
           ${active
             ? `bg-yellow-500/20 text-yellow-500 border border-yellow-500/50`
             : 'text-gray-400 hover:bg-gray-900 hover:text-gray-200'}
@@ -365,12 +370,41 @@ const Sidebar = ({
       >
         {icon}
         <span className="truncate flex-1">{thread.title || 'New Chat'}</span>
-        <button
-          onClick={(e) => { e.stopPropagation(); onDeleteThread(thread.id); }}
-          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
-        >
-          <Trash2 size={12} />
-        </button>
+        <div className="relative shrink-0 flex items-center">
+          <button
+            onClick={(e) => { e.stopPropagation(); setActiveMenuId(isMenuOpen ? null : thread.id); }}
+            className={`${active ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all transition-opacity`}
+          >
+            <MoreVertical size={14} />
+          </button>
+
+          {isMenuOpen && (
+            <>
+              <div className="fixed inset-0 z-[65]" onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); }} />
+              <div className="absolute right-0 top-full mt-1 w-36 bg-[#111] border border-gray-800 rounded-xl shadow-2xl z-[70] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200 py-1 font-bold">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onShareThread && onShareThread(thread.id); setActiveMenuId(null); }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-[10px] text-gray-300 hover:bg-yellow-500/10 hover:text-yellow-500 transition-colors uppercase tracking-widest"
+                >
+                  Share <Share2 size={12} />
+                </button>
+                <div className="h-[1px] bg-gray-800 mx-2 my-0.5" />
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDeleteThread(thread.id); setActiveMenuId(null); }}
+                  className="w-full flex items-center justify-between px-3 py-2 text-[10px] text-red-500 hover:bg-red-500/10 transition-colors uppercase tracking-widest"
+                >
+                  Delete <Trash2 size={12} />
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setActiveMenuId(null); }}
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-[8px] text-gray-600 hover:text-gray-400 transition-colors uppercase tracking-[0.2em] mt-1"
+                >
+                  Close <X size={10} />
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     );
   };
@@ -1077,6 +1111,58 @@ const PricingModal = ({ isOpen, onClose, user, onPlanUpdate }: any) => {
   );
 };
 
+const ShareModal = ({ isOpen, onClose, threadId }: { isOpen: boolean, onClose: () => void, threadId: string | null }) => {
+  const [copied, setCopied] = useState(false);
+  if (!isOpen || !threadId) return null;
+
+  const shareUrl = `${window.location.origin}?share=${threadId}`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md bg-[#111] border border-gray-800 rounded-2xl p-6 relative animate-in fade-in zoom-in duration-200 shadow-2xl">
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors p-2 bg-white/5 rounded-full">
+          <X size={18} />
+        </button>
+
+        <div className="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center mb-6 border border-yellow-500/20">
+          <Share2 size={24} className="text-yellow-500" />
+        </div>
+
+        <h3 className="text-xl font-black text-white mb-2 uppercase tracking-tight">Share Access</h3>
+        <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+          Anyone with this premium link will get full access to the AI conversation history.
+        </p>
+
+        <div className="flex items-center gap-2 bg-black/50 border border-gray-800 rounded-xl p-3 mb-8 group hover:border-yellow-500/30 transition-all">
+          <div className="flex-1 truncate text-xs text-gray-400 font-mono px-1">
+            {shareUrl}
+          </div>
+          <button
+            onClick={handleCopy}
+            className={`flex items-center gap-2 px-4 py-2 font-bold text-[10px] uppercase tracking-widest transition-all rounded-lg ${copied ? 'bg-green-500 text-white' : 'bg-yellow-500 text-black hover:bg-yellow-400'}`}
+          >
+            {copied ? <UserCheck size={12} /> : <Copy size={12} />}
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full py-3 bg-gray-900 border border-gray-800 hover:border-gray-700 text-gray-400 hover:text-white font-black rounded-2xl transition-all uppercase text-[10px] tracking-[0.2em]"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // --- Main App ---
 
 const DarkPixelsInner = () => {
@@ -1092,6 +1178,8 @@ const DarkPixelsInner = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
   const [appMode, setAppMode] = useState<AppMode>('chat');
   const [isPricingOpen, setIsPricingOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [shareThreadId, setShareThreadId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -1131,6 +1219,14 @@ const DarkPixelsInner = () => {
       }
     }
     else { setAuthState('auth'); }
+
+    // Handle shared links
+    const params = new URLSearchParams(window.location.search);
+    const sharedId = params.get('share');
+    if (sharedId) {
+      setCurrentThreadId(sharedId);
+      if (!saved) setAuthState('guest');
+    }
   }, []);
 
   const fetchThreads = async () => {
@@ -1148,13 +1244,25 @@ const DarkPixelsInner = () => {
 
   const fetchMessages = async () => {
     if (!currentThreadId) { setMessages([]); return; }
-    if (authState === 'user' && user) {
-      try {
-        const data = await safeFetch(`${API_BASE_URL}/threads/${currentThreadId}/messages`);
-        if (data) setMessages(data.map((d: any) => ({ ...d, id: d.id.toString() })));
-      } catch (e) { console.error(e); }
-    } else if (authState === 'guest') {
-      setMessages(JSON.parse(localStorage.getItem(getGuestMessagesKey(currentThreadId)) || '[]'));
+
+    // 1. Try Local Storage
+    const localMsgs = JSON.parse(localStorage.getItem(getGuestMessagesKey(currentThreadId)) || '[]');
+    if (localMsgs.length > 0) {
+      setMessages(localMsgs);
+      return;
+    }
+
+    // 2. Try Server (Shared or User)
+    try {
+      const data = await safeFetch(`${API_BASE_URL}/threads/${currentThreadId}/messages`);
+      if (data && Array.isArray(data)) {
+        setMessages(data.map((d: any) => ({ ...d, id: d.id.toString() })));
+      } else {
+        setMessages([]);
+      }
+    } catch (e) {
+      console.error(e);
+      setMessages([]);
     }
   };
 
@@ -1460,6 +1568,10 @@ const DarkPixelsInner = () => {
             if (currentThreadId === id) setCurrentThreadId(null);
           }
         }}
+        onShareThread={(id: string) => {
+          setShareThreadId(id);
+          setIsShareOpen(true);
+        }}
         onCloseMobile={() => setIsSidebarOpen(false)}
         appMode={appMode}
       />
@@ -1687,6 +1799,12 @@ const DarkPixelsInner = () => {
               localStorage.setItem('dp_user', JSON.stringify(updatedUser));
             }
           }}
+        />
+
+        <ShareModal
+          isOpen={isShareOpen}
+          onClose={() => setIsShareOpen(false)}
+          threadId={shareThreadId}
         />
       </div>
       {previewCode && <CanvasPanel code={previewCode} onClose={() => setPreviewCode(null)} />}
