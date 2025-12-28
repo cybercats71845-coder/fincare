@@ -1389,28 +1389,40 @@ const DarkPixelsInner = () => {
               ))}
             </div>
 
-            <div className="flex items-center gap-1 md:gap-2">
-              {user?.plan !== 'Pro' && (
+            <div className="flex items-center gap-1 md:gap-4">
+              {user?.plan && user.plan !== 'Free' ? (
+                <div className="hidden sm:flex flex-col items-end gap-1">
+                  <div className="flex items-center gap-1.5 px-3 py-1 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" />
+                    <span className="text-[10px] font-black text-yellow-500 uppercase tracking-widest">{user.plan}</span>
+                  </div>
+                  {user.plan !== 'Pro' && (
+                    <button
+                      onClick={() => setIsPricingOpen(true)}
+                      className="text-[9px] font-bold text-gray-500 hover:text-yellow-500 transition-colors uppercase tracking-widest flex items-center gap-1 group"
+                    >
+                      Upgrade to Pro <Zap size={8} className="group-hover:fill-yellow-500 transition-all" />
+                    </button>
+                  )}
+                </div>
+              ) : (
                 <button
                   onClick={() => setIsPricingOpen(true)}
                   className="hidden sm:flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-yellow-400 transition-all mr-2 shadow-lg shadow-yellow-900/40"
                 >
                   <Zap size={12} fill="currentColor" />
-                  {user?.plan && user.plan !== 'Free' ? `UPGRADE FROM ${user.plan}` : 'Upgrade to Pro'}
+                  Upgrade to Pro
                 </button>
               )}
-              {user?.plan === 'Pro' && (
-                <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-gray-900 text-yellow-500 border border-yellow-500/20 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all mr-2">
-                  <Sparkles size={12} />
-                  Pro Member
-                </div>
-              )}
-              <button onClick={() => setIsSettingsOpen(true)} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-gray-400">
-                <Settings size={18} />
-              </button>
-              <button onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-red-500">
-                <LogOut size={18} />
-              </button>
+
+              <div className="flex items-center gap-1 md:gap-2">
+                <button onClick={() => setIsSettingsOpen(true)} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-gray-400">
+                  <Settings size={18} />
+                </button>
+                <button onClick={() => { localStorage.removeItem('dp_user'); setAuthState('auth'); setUser(null); }} className="p-1.5 md:p-2 hover:bg-gray-800 rounded-lg text-red-500">
+                  <LogOut size={18} />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1428,15 +1440,33 @@ const DarkPixelsInner = () => {
               ))}
             </div>
 
-            {user?.plan !== 'Pro' && (
-              <button
-                onClick={() => setIsPricingOpen(true)}
-                className="w-full py-2.5 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all mt-1"
-              >
-                <Zap size={12} fill="currentColor" />
-                {user?.plan && user.plan !== 'Free' ? `UPGRADE FROM ${user.plan}` : 'UPGRADE TO PRO'}
-              </button>
-            )}
+            <div className="flex flex-col gap-1.5">
+              {user?.plan && user.plan !== 'Free' ? (
+                <div className="flex flex-col gap-2">
+                  <div className="w-full py-2 bg-gray-900/80 border border-yellow-500/20 rounded-xl flex items-center justify-center gap-2">
+                    <Sparkles size={12} className="text-yellow-500" />
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">{user.plan} Active</span>
+                  </div>
+                  {user.plan !== 'Pro' && (
+                    <button
+                      onClick={() => setIsPricingOpen(true)}
+                      className="w-full py-2.5 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all"
+                    >
+                      <Zap size={12} fill="currentColor" />
+                      UPGRADE TO PRO
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsPricingOpen(true)}
+                  className="w-full py-2.5 bg-yellow-500 text-black rounded-xl font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-2 transition-all mt-1"
+                >
+                  <Zap size={12} fill="currentColor" />
+                  UPGRADE TO PRO
+                </button>
+              )}
+            </div>
 
             {/* 3rd Row: Chat History Button */}
             <div className="flex justify-start pb-1">
